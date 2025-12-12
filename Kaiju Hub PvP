@@ -117,6 +117,9 @@ local tracerLine = Drawing.new("Line")
 tracerLine.Thickness = 1
 tracerLine.Visible = false
 
+-- ====================
+-- คาดเดาตำแหน่ง
+-- ====================
 local PREDICTION_FACTOR = 0.165
 
 local function PredictPosition(headPart)
@@ -295,124 +298,168 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local myConfig = Window:Config({Title = "KaijuHubConfig"})
-
-local SilentAimToggle = CombatTab:Toggle({
+-- UI Controls
+CombatTab:Toggle({
     Title = "Silent Aim",
     Value = SilentAimEnabledValue.Value,
     Callback = function(state)
         SilentAimEnabledValue.Value = state
         fovCircle.Visible = state
         tracerLine.Visible = state
-        myConfig:Register("SilentAimEnabled", SilentAimToggle)
     end
 })
-local savedSilentAim = myConfig:Load("SilentAimEnabled")
-if savedSilentAim then SilentAimToggle:Set(savedSilentAim.Value) end
 
-local AntiLockToggle = CombatTab:Toggle({
+CombatTab:Toggle({
     Title = "Attack Anti Lock",
     Value = AttackAntiLockEnabledValue.Value,
     Callback = function(state)
         AttackAntiLockEnabledValue.Value = state
-        myConfig:Register("AttackAntiLockEnabled", AntiLockToggle)
     end
 })
-local savedAntiLock = myConfig:Load("AttackAntiLockEnabled")
-if savedAntiLock then AntiLockToggle:Set(savedAntiLock.Value) end
 
-local AntiKillToggle = CombatTab:Toggle({
+CombatTab:Toggle({
     Title = "Attack Anti Kill",
     Value = AttackAntiKillEnabledValue.Value,
     Callback = function(state)
         AttackAntiKillEnabledValue.Value = state
-        myConfig:Register("AttackAntiKillEnabled", AntiKillToggle)
+        if state then
+            print("✅ Attack Anti Kill: ON (Prediction Disabled)")
+        else
+            print("❌ Attack Anti Kill: OFF (Prediction Enabled)")
+        end
     end
 })
-local savedAntiKill = myConfig:Load("AttackAntiKillEnabled")
-if savedAntiKill then AntiKillToggle:Set(savedAntiKill.Value) end
 
-local FOVSlider = CombatTab:Slider({
+CombatTab:Space()
+
+CombatTab:Slider({
     Title = "FOV :",
     Step = 5,
     Value = {Min = 10, Max = 1000, Default = FOVRadiusValue.Value},
-    Callback = function(value)
-        FOVRadiusValue.Value = value
-        myConfig:Register("FOVRadius", FOVSlider)
-    end
+    Callback = function(value) FOVRadiusValue.Value = value end
 })
-local savedFOV = myConfig:Load("FOVRadius")
-if savedFOV then FOVSlider:Set(savedFOV.Value) end
 
-local LockSlider = CombatTab:Slider({
+CombatTab:Slider({
     Title = "Lock Distance :",
     Step = 25,
     Value = {Min = 50, Max = 3000, Default = LockDistanceValue.Value},
-    Callback = function(value)
-        LockDistanceValue.Value = value
-        myConfig:Register("LockDistance", LockSlider)
-    end
+    Callback = function(value) LockDistanceValue.Value = value end
 })
-local savedLock = myConfig:Load("LockDistance")
-if savedLock then LockSlider:Set(savedLock.Value) end
 
-local TargetDropdown = CombatTab:Dropdown({
+CombatTab:Dropdown({
     Title = "Target Part",
     Values = {"Head","HumanoidRootPart"},
     Value = TargetPartValue.Value,
-    Callback = function(option)
-        TargetPartValue.Value = option
-        myConfig:Register("TargetPart", TargetDropdown)
-    end
+    Callback = function(option) TargetPartValue.Value = option end
 })
-local savedTarget = myConfig:Load("TargetPart")
-if savedTarget then TargetDropdown:Set(savedTarget.Value) end
 
-local MagicBulletToggle = CombatTab:Toggle({
+CombatTab:Toggle({
     Title = "Magic Bullet",
     Value = MagicBulletValue.Value,
-    Callback = function(state)
-        MagicBulletValue.Value = state
-        myConfig:Register("MagicBullet", MagicBulletToggle)
-    end
+    Callback = function(state) MagicBulletValue.Value = state end
 })
-local savedMagic = myConfig:Load("MagicBullet")
-if savedMagic then MagicBulletToggle:Set(savedMagic.Value) end
+
+-- Safe Players Multi Dropdown + Refresh
+local function UpdatePlayerNames()
+    local names = {}
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            table.insert(names, plr.Name)
+        end
+    end
+    return names
+end
+
+CombatTab:Space()
 
 local safePlayersDropdown = CombatTab:Dropdown({
     Title = "Safe Players",
     Multi = true,
     AllowNone = true,
     Values = UpdatePlayerNames(),
-    Value = IgnorePlayers,
+    Value = {},
     Callback = function(selected)
         IgnorePlayers = {}
         for _, name in ipairs(selected) do
             table.insert(IgnorePlayers, name)
         end
-        myConfig:Register("SafePlayers", safePlayersDropdown)
+        print("Safe Players Updated: " .. table.concat(IgnorePlayers, ", "))
     end
 })
-local savedSafe = myConfig:Load("SafePlayers")
-if savedSafe then safePlayersDropdown:Set(savedSafe.Value) end
 
 CombatTab:Button({
+    Title = "Refresh Player List",
+    Callback = function()
+        local newValues = UpdatePlayerNames()
+        safePlayersDropdown:SetValues(newValues)
+        print("✅ Player list refreshed")
+    end
+})
+
+-- ตัวแปรเก็บชื่อ Config
+local CombatConfigName = ""
+
+-- Input ใส่ชื่อ Config
+SettingsTab:Input({
+    Title = "Config Name",
+    Placeholder = "ใส่ชื่อ Config",
+    Callback = function(txt)
+        CombatConfigName = txt
+    end
+})
+
+-- ปุ่ม Save
+SettingsTab:Button({
     Title = "Save Config",
     Callback = function()
+        if CombatConfigName == "" then
+            warn("กรุณาใส่ชื่อ Config ก่อน Save")
+            return
+        end
+        for _, widget in pairs(CombatTab.Widgets or {}) do
+            pcall(function()
+                myConfig:Register(CombatConfigName.."_"..widget.Title, widget)
+            end)
+        end
         myConfig:Save()
+        print("✅ Combat Config saved as: "..CombatConfigName)
     end
 })
 
-CombatTab:Button({
+-- ปุ่ม Load
+SettingsTab:Button({
     Title = "Load Config",
     Callback = function()
-        myConfig:LoadAll()
+        if CombatConfigName == "" then
+            warn("กรุณาใส่ชื่อ Config ก่อน Load")
+            return
+        end
+        for _, widget in pairs(CombatTab.Widgets or {}) do
+            pcall(function()
+                local saved = myConfig:Load(CombatConfigName.."_"..widget.Title)
+                if saved then
+                    widget:Set(saved.Value)
+                end
+            end)
+        end
+        print("✅ Combat Config loaded: "..CombatConfigName)
     end
 })
 
-CombatTab:Button({
+-- ปุ่ม Clear
+SettingsTab:Button({
     Title = "Clear Config",
     Callback = function()
-        myConfig:ClearAll()
+        if CombatConfigName == "" then
+            warn("กรุณาใส่ชื่อ Config ก่อน Clear")
+            return
+        end
+        for _, widget in pairs(CombatTab.Widgets or {}) do
+            pcall(function()
+                myConfig:Clear(CombatConfigName.."_"..widget.Title)
+            end)
+        end
+        myConfig:Save()
+        print("❌ Combat Config cleared: "..CombatConfigName)
     end
 })
