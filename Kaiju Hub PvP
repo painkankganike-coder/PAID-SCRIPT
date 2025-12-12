@@ -25,9 +25,23 @@ Window:Tag({
 })
 
 Window:Tag({
-    Title = "v0.4.8",
+    Title = "v0.5.8",
     Color = Color3.fromHex("#2889F7"),
     Radius = 13,
+})
+
+Window:EditOpenButton({
+    Title = "Kaij Hub",
+    Icon = "circle-ellipsis",
+    CornerRadius = UDim.new(0,16),
+    StrokeThickness = 2,
+    Color = ColorSequence.new(
+        Color3.fromHex("2889F7"), 
+        Color3.fromHex("90C6FC")
+    ),
+    OnlyMobile = false,
+    Enabled = true,
+    Draggable = true,
 })
 
 local CombatTab = Window:Tab({Title = "COMBAT:", Icon = "crosshair"})
