@@ -298,8 +298,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- UI Controls
-CombatTab:Toggle({
+local SilentAimToggle = CombatTab:Toggle({
     Title = "Silent Aim",
     Value = SilentAimEnabledValue.Value,
     Callback = function(state)
@@ -308,16 +307,20 @@ CombatTab:Toggle({
         tracerLine.Visible = state
     end
 })
+myConfig:Register("SilentAim", SilentAimToggle)
 
-CombatTab:Toggle({
+-- Attack Anti Lock
+local AttackAntiLockToggle = CombatTab:Toggle({
     Title = "Attack Anti Lock",
     Value = AttackAntiLockEnabledValue.Value,
     Callback = function(state)
         AttackAntiLockEnabledValue.Value = state
     end
 })
+myConfig:Register("AttackAntiLock", AttackAntiLockToggle)
 
-CombatTab:Toggle({
+-- Attack Anti Kill
+local AttackAntiKillToggle = CombatTab:Toggle({
     Title = "Attack Anti Kill",
     Value = AttackAntiKillEnabledValue.Value,
     Callback = function(state)
@@ -329,46 +332,51 @@ CombatTab:Toggle({
         end
     end
 })
+myConfig:Register("AttackAntiKill", AttackAntiKillToggle)
 
 CombatTab:Space()
-
-CombatTab:Slider({
+-- FOV Slider
+local FOVSlider = CombatTab:Slider({
     Title = "FOV :",
     Step = 5,
     Value = {Min = 10, Max = 1000, Default = FOVRadiusValue.Value},
-    Callback = function(value) FOVRadiusValue.Value = value end
+    Callback = function(value)
+        FOVRadiusValue.Value = value
+    end
 })
+myConfig:Register("FOVRadius", FOVSlider)
 
-CombatTab:Slider({
+-- Lock Distance Slider
+local LockDistanceSlider = CombatTab:Slider({
     Title = "Lock Distance :",
     Step = 25,
     Value = {Min = 50, Max = 3000, Default = LockDistanceValue.Value},
-    Callback = function(value) LockDistanceValue.Value = value end
+    Callback = function(value)
+        LockDistanceValue.Value = value
+    end
 })
+myConfig:Register("LockDistance", LockDistanceSlider)
 
-CombatTab:Dropdown({
+-- Target Part Dropdown
+local TargetPartDropdown = CombatTab:Dropdown({
     Title = "Target Part",
     Values = {"Head","HumanoidRootPart"},
     Value = TargetPartValue.Value,
-    Callback = function(option) TargetPartValue.Value = option end
+    Callback = function(option)
+        TargetPartValue.Value = option
+    end
 })
+myConfig:Register("TargetPart", TargetPartDropdown)
 
-CombatTab:Toggle({
+-- Magic Bullet Toggle
+local MagicBulletToggle = CombatTab:Toggle({
     Title = "Magic Bullet",
     Value = MagicBulletValue.Value,
-    Callback = function(state) MagicBulletValue.Value = state end
-})
-
--- Safe Players Multi Dropdown + Refresh
-local function UpdatePlayerNames()
-    local names = {}
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            table.insert(names, plr.Name)
-        end
+    Callback = function(state)
+        MagicBulletValue.Value = state
     end
-    return names
-end
+})
+myConfig:Register("MagicBullet", MagicBulletToggle)
 
 CombatTab:Space()
 
@@ -386,6 +394,7 @@ local safePlayersDropdown = CombatTab:Dropdown({
         print("Safe Players Updated: " .. table.concat(IgnorePlayers, ", "))
     end
 })
+myConfig:Register("SafePlayers", safePlayersDropdown)
 
 CombatTab:Button({
     Title = "Refresh Player List",
@@ -396,35 +405,26 @@ CombatTab:Button({
     end
 })
 
-if myConfig then
-    myConfig:Register("SilentAim", SilentAimEnabledValue)
-    myConfig:Register("AttackAntiLock", AttackAntiLockEnabledValue)
-    myConfig:Register("AttackAntiKill", AttackAntiKillEnabledValue)
-    myConfig:Register("FOVRadius", FOVRadiusValue)
-    myConfig:Register("LockDistance", LockDistanceValue)
-    myConfig:Register("TargetPart", TargetPartValue)
-    myConfig:Register("MagicBullet", MagicBulletValue)
-    myConfig:Register("SafePlayers", safePlayersDropdown)
-    
-    myConfig:Load()
-end
-
 SettingsTab:Button({
     Title = "Save Config",
     Callback = function()
-        if myConfig and myConfig.Save then
-            myConfig:Save()
-            print("💾 Config saved!")
-        end
+        myConfig:Save()
+        print("💾 Config saved!")
+    end
+})
+
+SettingsTab:Button({
+    Title = "Load Config",
+    Callback = function()
+        myConfig:Load()
+        print("📂 Config loaded!")
     end
 })
 
 SettingsTab:Button({
     Title = "Delete Config",
     Callback = function()
-        if myConfig and myConfig.Delete then
-            myConfig:Delete()
-            print("🗑 Config deleted!")
-        end
+        myConfig:Delete()
+        print("🗑️ Config deleted!")
     end
 })
