@@ -98,12 +98,10 @@ local IgnorePlayers = {}
 local CurrentTarget, head, aimPos
 local hue = 0
 
--- ปืนที่รองรับ
 local GunNames = {"P226","MP5","M24","Draco","Glock","Sawnoff","Uzi","G3","C9","Hunting Rifle","Anaconda","AK47","Remington","Double Barrel"}
 local GunLookup = {}
 for _, name in pairs(GunNames) do GunLookup[name] = true end
 
--- FOV Circle
 local fovCircle = Drawing.new("Circle")
 fovCircle.Thickness = 1
 fovCircle.NumSides = 100
@@ -112,50 +110,36 @@ fovCircle.Filled = false
 fovCircle.Visible = SilentAimEnabledValue.Value
 fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
--- Tracer
 local tracerLine = Drawing.new("Line")
 tracerLine.Thickness = 1
 tracerLine.Visible = false
 
--- ====================
--- คาดเดาตำแหน่ง
--- ====================
 local PREDICTION_FACTOR = 0.165
 
 local function PredictPosition(headPart)
     local root = headPart.Parent:FindFirstChild("HumanoidRootPart")
     if not root then return headPart.Position end
-
     local velocity = root.Velocity
     local prediction = headPart.Position + (velocity * PREDICTION_FACTOR)
-
-    -- รองรับรถ (เพิ่ม Velocity รถ x1.2)
     local seat = root:FindFirstChildWhichIsA("WeldConstraint") or root:FindFirstChildWhichIsA("Weld")
     if seat and seat.Part0 then
         prediction = headPart.Position + (seat.Part0.Velocity * PREDICTION_FACTOR * 1.2)
     end
-
     return prediction
 end
 
--- AntiLockPrediction + Attack Anti Kill
 local function AntiLockPrediction(part)
     if not part or not part.Parent then return part.Position end
     local root = part.Parent:FindFirstChild("HumanoidRootPart")
     local humanoid = part.Parent:FindFirstChild("Humanoid")
     if not humanoid then return part.Position end
-
     local headPos = part.Position + Vector3.new(0, (part:IsA("BasePart") and part.Size.Y or 1)/2, 0)
-
-    -- ถ้าเปิด Attack Anti Kill คืนตำแหน่งตรง ๆ
     if AttackAntiKillEnabledValue.Value then
         return headPos
     end
-
     if AttackAntiLockEnabledValue.Value then
         local speed = root and root.Velocity.Magnitude or 0
         local factor = (speed >= 14) and 6 or 0
-        -- ตรวจจับทิศทางเดินแบบสี่มุม (x,z)
         local vel = root.Velocity
         local x = vel.X
         local z = vel.Z
@@ -171,7 +155,6 @@ local function AntiLockPrediction(part)
     end
 end
 
--- ฟังก์ชัน Ignore
 local function IsIgnored(plr)
     for _, name in ipairs(IgnorePlayers) do
         if string.lower(plr.Name) == string.lower(name) then
@@ -181,7 +164,6 @@ local function IsIgnored(plr)
     return false
 end
 
--- หาเป้าหมายใกล้ FOV
 local function GetClosestTarget()
     local closest
     local shortest = math.huge
@@ -206,7 +188,6 @@ local function GetClosestTarget()
     return closest
 end
 
--- เช็คว่าถือปืน
 local function IsHoldingAllowedGun(args)
     local ok, weapon = pcall(function() return args[3] end)
     if ok and typeof(weapon) == "Instance" and GunLookup[weapon.Name] then return true end
@@ -218,7 +199,6 @@ local function IsHoldingAllowedGun(args)
     return false
 end
 
--- ตรวจกำแพง
 local function IsBehindWall(targetHead)
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Head") then return false end
     local origin = LocalPlayer.Character.Head.Position
@@ -230,7 +210,6 @@ local function IsBehindWall(targetHead)
     return result and result.Instance and not result.Instance:IsDescendantOf(targetHead.Parent)
 end
 
--- Hook ยิง
 local send = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Send")
 local oldFire
 oldFire = hookfunction(send.FireServer, function(self, ...)
@@ -241,16 +220,12 @@ oldFire = hookfunction(send.FireServer, function(self, ...)
             local part = CurrentTarget.Character:FindFirstChild(TargetPartValue.Value) or CurrentTarget.Character:FindFirstChild("Head")
             head = part
             aimPos = AntiLockPrediction(part)
-
             if MagicBulletValue.Value and (part and part.Parent and IsBehindWall(part)) then
                 args[4] = CFrame.new(1/0,1/0,1/0,0/0,0/0,0/0,0/0,0/0,0/0,0/0,0/0,0/0)
             else
                 args[4] = CFrame.new(LocalPlayer.Character.Head.Position, aimPos)
             end
-
             args[5] = {[1] = {[1] = {["Instance"] = head, ["Position"] = aimPos}}}
-
-            -- Beam
             local ourHead = LocalPlayer.Character.Head
             local distance = (aimPos - ourHead.Position).Magnitude
             local beam = Instance.new("Part", workspace)
@@ -266,21 +241,17 @@ oldFire = hookfunction(send.FireServer, function(self, ...)
     return oldFire(self, unpack(args))
 end)
 
--- Render FOV + Tracer
 RunService.RenderStepped:Connect(function()
     fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     fovCircle.Radius = FOVRadiusValue.Value
     hue = (hue + 0.0005) % 1
     fovCircle.Color = Color3.fromHSV(hue, 1, 1)
-
     if not SilentAimEnabledValue.Value then
         tracerLine.Visible = false
         return
     end
-
     local target = GetClosestTarget()
     CurrentTarget = target
-
     if target and target.Character and target.Character:FindFirstChild("Head") then
         local headPos = target.Character:FindFirstChild(TargetPartValue.Value).Position or target.Character.Head.Position
         local screenPos, onScreen = Camera:WorldToViewportPoint(headPos)
@@ -309,7 +280,6 @@ local SilentAimToggle = CombatTab:Toggle({
 })
 myConfig:Register("SilentAim", SilentAimToggle)
 
--- Attack Anti Lock
 local AttackAntiLockToggle = CombatTab:Toggle({
     Title = "Attack Anti Lock",
     Value = AttackAntiLockEnabledValue.Value,
@@ -319,23 +289,17 @@ local AttackAntiLockToggle = CombatTab:Toggle({
 })
 myConfig:Register("AttackAntiLock", AttackAntiLockToggle)
 
--- Attack Anti Kill
 local AttackAntiKillToggle = CombatTab:Toggle({
     Title = "Attack Anti Kill",
     Value = AttackAntiKillEnabledValue.Value,
     Callback = function(state)
         AttackAntiKillEnabledValue.Value = state
-        if state then
-            print("✅ Attack Anti Kill: ON (Prediction Disabled)")
-        else
-            print("❌ Attack Anti Kill: OFF (Prediction Enabled)")
-        end
     end
 })
 myConfig:Register("AttackAntiKill", AttackAntiKillToggle)
 
 CombatTab:Space()
--- FOV Slider
+
 local FOVSlider = CombatTab:Slider({
     Title = "FOV :",
     Step = 5,
@@ -346,7 +310,6 @@ local FOVSlider = CombatTab:Slider({
 })
 myConfig:Register("FOVRadius", FOVSlider)
 
--- Lock Distance Slider
 local LockDistanceSlider = CombatTab:Slider({
     Title = "Lock Distance :",
     Step = 25,
@@ -357,7 +320,6 @@ local LockDistanceSlider = CombatTab:Slider({
 })
 myConfig:Register("LockDistance", LockDistanceSlider)
 
--- Target Part Dropdown
 local TargetPartDropdown = CombatTab:Dropdown({
     Title = "Target Part",
     Values = {"Head","HumanoidRootPart"},
@@ -368,7 +330,6 @@ local TargetPartDropdown = CombatTab:Dropdown({
 })
 myConfig:Register("TargetPart", TargetPartDropdown)
 
--- Magic Bullet Toggle
 local MagicBulletToggle = CombatTab:Toggle({
     Title = "Magic Bullet",
     Value = MagicBulletValue.Value,
@@ -391,7 +352,6 @@ local safePlayersDropdown = CombatTab:Dropdown({
         for _, name in ipairs(selected) do
             table.insert(IgnorePlayers, name)
         end
-        print("Safe Players Updated: " .. table.concat(IgnorePlayers, ", "))
     end
 })
 myConfig:Register("SafePlayers", safePlayersDropdown)
@@ -401,7 +361,6 @@ CombatTab:Button({
     Callback = function()
         local newValues = UpdatePlayerNames()
         safePlayersDropdown:SetValues(newValues)
-        print("✅ Player list refreshed")
     end
 })
 
@@ -409,7 +368,6 @@ SettingsTab:Button({
     Title = "Save Config",
     Callback = function()
         myConfig:Save()
-        print("💾 Config saved!")
     end
 })
 
@@ -417,7 +375,6 @@ SettingsTab:Button({
     Title = "Load Config",
     Callback = function()
         myConfig:Load()
-        print("📂 Config loaded!")
     end
 })
 
@@ -425,6 +382,5 @@ SettingsTab:Button({
     Title = "Delete Config",
     Callback = function()
         myConfig:Delete()
-        print("🗑️ Config deleted!")
     end
 })
