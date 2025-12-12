@@ -278,7 +278,7 @@ local SilentAimToggle = CombatTab:Toggle({
         tracerLine.Visible = state
     end
 })
-myConfig:Register("SilentAim", SilentAimToggle)
+myConfig:Register("SilentAimEnabled", SilentAimToggle)
 
 local AttackAntiLockToggle = CombatTab:Toggle({
     Title = "Attack Anti Lock",
@@ -287,7 +287,7 @@ local AttackAntiLockToggle = CombatTab:Toggle({
         AttackAntiLockEnabledValue.Value = state
     end
 })
-myConfig:Register("AttackAntiLock", AttackAntiLockToggle)
+myConfig:Register("AttackAntiLockEnabled", AttackAntiLockToggle)
 
 local AttackAntiKillToggle = CombatTab:Toggle({
     Title = "Attack Anti Kill",
@@ -296,9 +296,7 @@ local AttackAntiKillToggle = CombatTab:Toggle({
         AttackAntiKillEnabledValue.Value = state
     end
 })
-myConfig:Register("AttackAntiKill", AttackAntiKillToggle)
-
-CombatTab:Space()
+myConfig:Register("AttackAntiKillEnabled", AttackAntiKillToggle)
 
 local FOVSlider = CombatTab:Slider({
     Title = "FOV :",
@@ -308,7 +306,7 @@ local FOVSlider = CombatTab:Slider({
         FOVRadiusValue.Value = value
     end
 })
-myConfig:Register("FOVRadius", FOVSlider)
+myConfig:Register("FOVRadiusValue", FOVSlider)
 
 local LockDistanceSlider = CombatTab:Slider({
     Title = "Lock Distance :",
@@ -318,7 +316,7 @@ local LockDistanceSlider = CombatTab:Slider({
         LockDistanceValue.Value = value
     end
 })
-myConfig:Register("LockDistance", LockDistanceSlider)
+myConfig:Register("LockDistanceValue", LockDistanceSlider)
 
 local TargetPartDropdown = CombatTab:Dropdown({
     Title = "Target Part",
@@ -328,7 +326,7 @@ local TargetPartDropdown = CombatTab:Dropdown({
         TargetPartValue.Value = option
     end
 })
-myConfig:Register("TargetPart", TargetPartDropdown)
+myConfig:Register("TargetPartValue", TargetPartDropdown)
 
 local MagicBulletToggle = CombatTab:Toggle({
     Title = "Magic Bullet",
@@ -337,11 +335,9 @@ local MagicBulletToggle = CombatTab:Toggle({
         MagicBulletValue.Value = state
     end
 })
-myConfig:Register("MagicBullet", MagicBulletToggle)
+myConfig:Register("MagicBulletValue", MagicBulletToggle)
 
-CombatTab:Space()
-
-local safePlayersDropdown = CombatTab:Dropdown({
+local SafePlayersDropdown = CombatTab:Dropdown({
     Title = "Safe Players",
     Multi = true,
     AllowNone = true,
@@ -354,33 +350,29 @@ local safePlayersDropdown = CombatTab:Dropdown({
         end
     end
 })
-myConfig:Register("SafePlayers", safePlayersDropdown)
+myConfig:Register("IgnorePlayers", SafePlayersDropdown)
 
+-- ปุ่ม Save / Load / Delete Config
 CombatTab:Button({
-    Title = "Refresh Player List",
-    Callback = function()
-        local newValues = UpdatePlayerNames()
-        safePlayersDropdown:SetValues(newValues)
-    end
-})
-
-SettingsTab:Button({
     Title = "Save Config",
     Callback = function()
         myConfig:Save()
+        print("✅ Config Saved")
     end
 })
 
-SettingsTab:Button({
+CombatTab:Button({
     Title = "Load Config",
     Callback = function()
         myConfig:Load()
+        print("✅ Config Loaded")
     end
 })
 
-SettingsTab:Button({
+CombatTab:Button({
     Title = "Delete Config",
     Callback = function()
         myConfig:Delete()
+        print("✅ Config Deleted")
     end
 })
