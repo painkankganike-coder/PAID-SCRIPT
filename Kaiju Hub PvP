@@ -34,7 +34,7 @@ Window:EditOpenButton({
     Title = "Kaiju Hub",
     Icon = "circle-ellipsis",
     CornerRadius = UDim.new(0,50),
-    StrokeThickness = 2,
+    StrokeThickness = 3,
     Color = ColorSequence.new(
         Color3.fromHex("292DFF"), 
         Color3.fromHex("6E6BFF")
@@ -58,3 +58,21 @@ local ServerTab = Window:Tab({Title = "Server", Icon = "server"})
 ServerTab:Section({Title="Server Hop  :"})
 local SettingsTab = Window:Tab({Title = "Settings", Icon = "settings"})
 SettingsTab:Section({Title="Settings  :"})
+
+SettingsTab:Button({
+    Title = "Save Config",
+    Callback = function()
+        if saveFunc then
+            saveFunc(myConfig)
+        end
+    end
+})
+
+SettingsTab:Button({
+    Title = "Delete Config",
+    Callback = function()
+        if deleteFunc then
+            deleteFunc(myConfig)
+        end
+    end
+})
