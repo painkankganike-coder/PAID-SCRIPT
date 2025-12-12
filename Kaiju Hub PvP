@@ -76,3 +76,40 @@ SettingsTab:Button({
         end
     end
 })
+
+-- สร้างปุ่ม Save Config และ Delete Config
+CombatTab:Space()
+
+-- Save Config
+CombatTab:Button({
+    Title = "Save Config",
+    Callback = function()
+        if myConfig and myConfig.Save then
+            myConfig:Save()
+            print("💾 Config saved!")
+        end
+    end
+})
+
+-- Delete Config
+CombatTab:Button({
+    Title = "Delete Config",
+    Callback = function()
+        if myConfig and myConfig.Delete then
+            myConfig:Delete()
+            print("🗑 Config deleted!")
+        end
+    end
+})
+
+-- ตัวอย่างการ Register ค่ากับ Config (ต้องทำหลังสร้าง UI ทุกตัว)
+if myConfig then
+    myConfig:Register("SilentAim", SilentAimEnabledValue)
+    myConfig:Register("AttackAntiLock", AttackAntiLockEnabledValue)
+    myConfig:Register("AttackAntiKill", AttackAntiKillEnabledValue)
+    myConfig:Register("FOVRadius", FOVRadiusValue)
+    myConfig:Register("LockDistance", LockDistanceValue)
+    myConfig:Register("TargetPart", TargetPartValue)
+    myConfig:Register("MagicBullet", MagicBulletValue)
+    myConfig:Register("SafePlayers", safePlayersDropdown)
+end
