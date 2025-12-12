@@ -31,13 +31,13 @@ Window:Tag({
 })
 
 Window:EditOpenButton({
-    Title = "Kaij Hub",
+    Title = "Kaiju Hub",
     Icon = "circle-ellipsis",
-    CornerRadius = UDim.new(0,16),
+    CornerRadius = UDim.new(0,50),
     StrokeThickness = 2,
     Color = ColorSequence.new(
-        Color3.fromHex("2889F7"), 
-        Color3.fromHex("90C6FC")
+        Color3.fromHex("292DFF"), 
+        Color3.fromHex("6E6BFF")
     ),
     OnlyMobile = false,
     Enabled = true,
