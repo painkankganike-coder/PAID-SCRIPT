@@ -1,0 +1,47 @@
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
+    game:GetService("Players"),
+    game:GetService("RunService"),
+    workspace.CurrentCamera,
+    game.Players.LocalPlayer,
+    game:GetService("ReplicatedStorage")
+
+local Window = WindUI:CreateWindow({
+    Title = "Kaiju Hub | Pvp",
+    Icon = "gitlab",
+    Author = "My Kaiju | BlockSpin | i love You :D !",
+    Folder = "XINCOHubFolder",
+    Size = UDim2.fromOffset(400, 350),
+    Theme = "Dark",
+    Transparent = true,
+    Resizable = true,
+})
+
+Window:Tag({
+    Title = "PAiD",
+    Icon = "lock-keyhole",
+    Color = Color3.fromHex("#90C6FC"),
+    Radius = 13,
+})
+
+Window:Tag({
+    Title = "v0.4.8",
+    Icon = "monitor-up",
+    Color = Color3.fromHex("#2889F7"),
+    Radius = 13,
+})
+
+local CombatTab = Window:Tab({Title = "COMBAT:", Icon = "crosshair"})
+CombatTab:Section({Title="GUN :"})
+local CheaterTab = Window:Tab({Title = "CHEATER:", Icon = "user"})
+CheaterTab:Section({Title="CHEATER :"})
+local MiscTab = Window:Tab({Title = "MISC:", Icon = "warehouse"})
+MiscTab:Section({Title="Misc :"})
+local EspTab = Window:Tab({Title = "Esp", Icon = "user"})
+EspTab:Section({Title="Esp PLAYER  :"})
+local WeaponTab = Window:Tab({Title = "Weapon Mods:", Icon = "crosshair"})
+WeaponTab:Section({Title="Weapon Mods :"})
+local ServerTab = Window:Tab({Title = "Server", Icon = "server"})
+ServerTab:Section({Title="Server Hop  :"})
+local SettingsTab = Window:Tab({Title = "Settings", Icon = "settings"})
+SettingsTab:Section({Title="Settings  :"})
