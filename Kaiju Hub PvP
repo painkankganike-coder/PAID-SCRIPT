@@ -18,7 +18,7 @@ local Window = WindUI:CreateWindow({
 })
 
 Window:Tag({
-    Title = "PAiD",
+    Title = "PAID",
     Icon = "lock-keyhole",
     Color = Color3.fromHex("#90C6FC"),
     Radius = 13,
@@ -26,7 +26,6 @@ Window:Tag({
 
 Window:Tag({
     Title = "v0.4.8",
-    Icon = "monitor-up",
     Color = Color3.fromHex("#2889F7"),
     Radius = 13,
 })
