@@ -380,7 +380,6 @@ CombatTab:Button({
     end
 })
 
-
 local SpeedEnabled = false
 local speedMultiplier = 0.10
 local JumpEnabled = false
@@ -404,6 +403,20 @@ CheaterTab:Toggle({
         SpeedEnabled = state
     end
 })
+
+RunService.RenderStepped:Connect(function(delta)
+    if SpeedEnabled and LocalPlayer.Character then
+        local char = LocalPlayer.Character
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if hum and root then
+            local moveDir = hum.MoveDirection
+            if moveDir.Magnitude > 0 then
+                root.CFrame = root.CFrame + moveDir.Unit * speedMultiplier * delta * 60
+            end
+        end
+    end
+end)
 
 CheaterTab:Slider({
     Title = "Jump Height",
