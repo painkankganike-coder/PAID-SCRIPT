@@ -357,7 +357,7 @@ end
 CombatTab:Space()
 
 local safePlayersDropdown = CombatTab:Dropdown({
-    Title = "Safe Players",
+    Title = "🛡️Safe Players",
     Multi = true,
     AllowNone = true,
     Values = UpdatePlayerNames(),
@@ -372,13 +372,14 @@ local safePlayersDropdown = CombatTab:Dropdown({
 })
 
 CombatTab:Button({
-    Title = "Refresh Player List",
+    Title = "🔁Safeayer List",
     Callback = function()
         local newValues = UpdatePlayerNames()
         safePlayersDropdown:SetValues(newValues)
         print("✅ Player list refreshed")
     end
 })
+
 
 local SpeedEnabled = false
 local speedMultiplier = 0.10
@@ -404,40 +405,16 @@ CheaterTab:Toggle({
     end
 })
 
-RunService.RenderStepped:Connect(function(delta)
-    if SpeedEnabled and LocalPlayer.Character then
-        local char = LocalPlayer.Character
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if hum and root then
-            local moveDir = hum.MoveDirection
-            if moveDir.Magnitude > 0 then
-                root.CFrame = root.CFrame + moveDir.Unit * speedMultiplier * delta * 60
-            end
-        end
-    end
-end)
-
-CheaterTab:Slider({
-    Title = "Jump Height",
-    Step = 1,
-    Value = {Min = 10, Max = 200, Default = 20}, 
-    Callback = function(value)
-        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.JumpPower = value       -- ปรับ JumpPower
-            hum.JumpHeight = value / 2  -- ปรับ JumpHeight ตามความเหมาะสม
-        end
-    end
-})
-
-local function ApplyJump()
+-- ฟังก์ชันปรับ Jump
+local function ApplyJump(value)
     local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
     if hum then
-        hum.JumpPower = 20
-        hum.JumpHeight = 20
+        hum.JumpPower = value or 20
+        hum.JumpHeight = (value or 20)/2
     end
 end
+
+-- ฟังก์ชันรีเซ็ต Jump
 local function RemoveJump()
     local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
     if hum then
@@ -446,6 +423,18 @@ local function RemoveJump()
     end
 end
 
+CheaterTab:Slider({
+    Title = "Jump Height",
+    Step = 1,
+    Value = {Min = 10, Max = 200, Default = 20}, 
+    Callback = function(value)
+        if JumpEnabled then
+            ApplyJump(value)
+        end
+    end
+})
+
+-- Toggle Jump
 CheaterTab:Toggle({
     Title = "Jump",
     Value = JumpEnabled,
@@ -455,10 +444,16 @@ CheaterTab:Toggle({
     end
 })
 
+-- รักษา JumpEnabled ตอน Spawn ใหม่
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(1)
+    if JumpEnabled then
+        ApplyJump()
+    end
+end)
 
 CheaterTab:Space()
 
--- ฟังก์ชันลบ BillboardGui ทุกตัวในตัวละคร
 local function RemoveBillboardGui()
     local char = LocalPlayer.Character
     if char then
@@ -470,6 +465,7 @@ local function RemoveBillboardGui()
     end
 end
 
+-- Toggle Hide Name
 CheaterTab:Toggle({
     Title = "Hide Name",
     Value = HideNameEnabled,
@@ -481,6 +477,7 @@ CheaterTab:Toggle({
     end
 })
 
+-- อัปเดต BillboardGui ทุกเฟรม (Realtime)
 RunService.RenderStepped:Connect(function()
     if HideNameEnabled and LocalPlayer.Character then
         for _, gui in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -491,6 +488,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- ตรวจจับตอน Spawn ใหม่
 LocalPlayer.CharacterAdded:Connect(function(char)
     if HideNameEnabled then
         -- ตรวจสอบทุกตัวลูกที่ถูกสร้างใน Character ใหม่
@@ -500,6 +498,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
             end
         end)
         
+        -- ลบที่มีอยู่แล้วใน Character
         RemoveBillboardGui()
     end
 end)
@@ -533,12 +532,14 @@ CheaterTab:Toggle({
     end
 })
 
+-- ตัวแปร
 local UndergroundEnabled = false
-local UndergroundAutoEnabled = true
-local UndergroundDepth = 50
-local SpinSpeed = 2080
-local UndergroundAngle = 0
+local UndergroundAutoEnabled = true -- toggle เปิด/ปิด
+local UndergroundDepth = 50       -- ความลึก
+local SpinSpeed = 2080            -- ความเร็วหมุนรอบตัว
+local UndergroundAngle = 0        -- มุมหมุน
 
+-- ฟังก์ชันเริ่มมุด
 local function StartUnderground()
     local char = LocalPlayer.Character
     if not char then return end
@@ -562,10 +563,12 @@ local function StartUnderground()
         local offsetZ = math.sin(rad) * 6
         local newPos = Vector3.new(hrp.Position.X + offsetX, initialY, hrp.Position.Z + offsetZ)
 
+        -- หมุนหันไปจุดเดิมกลางตัว
         hrp.CFrame = CFrame.new(newPos, Vector3.new(hrp.Position.X, initialY, hrp.Position.Z))
     end)
 end
 
+-- ฟังก์ชันหยุดมุด
 local function StopUnderground()
     UndergroundEnabled = false
 end
@@ -585,12 +588,14 @@ local function AntiRagdoll()
     end
 end
 
+-- อัปเดตทุกเฟรม
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
     local humanoid = char:FindFirstChild("Humanoid")
     if not humanoid then return end
 
+    -- Underground Auto
     if UndergroundAutoEnabled then
         if humanoid.Health < 16 and humanoid.Health > 0 then
             if not UndergroundEnabled then StartUnderground() end
@@ -599,9 +604,11 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- Anti Ragdoll
     AntiRagdoll()
 end)
 
+-- Toggle ปุ่ม UI
 CheaterTab:Toggle({
     Title = "Anti Kill",
     Value = UndergroundAutoEnabled,
@@ -611,7 +618,6 @@ CheaterTab:Toggle({
     end
 })
 
--- อัปเดตกรณีตายหรือ Respawn
 Players.LocalPlayer.CharacterAdded:Connect(function(char)
     if UndergroundAutoEnabled then
         UndergroundEnabled = false
@@ -808,10 +814,12 @@ CheaterTab:Toggle({
 CheaterTab:Divider()
 CheaterTab:Section({Title="Snap PC key [ Z ]"})
 
+local JumpEnabled = false
 local SnapHeightOffset = -7
 local SnapDirection = "Down"
 local SnapDuration = 0.1
-local SnapBlockDuration = 3 -- ระยะเวลาบล็อกอยู่
+local SnapBlockDuration = 5
+
 local isRunning = false
 
 local function SnapQuick()
@@ -823,7 +831,6 @@ local function SnapQuick()
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hrp or not hum then isRunning=false return end
 
-    -- สร้างบล็อก Neon สีขาวโปร่งแสงรอบตัว
     local blocks = {}
     for _, part in ipairs(char:GetChildren()) do
         if part:IsA("BasePart") then
@@ -834,7 +841,7 @@ local function SnapQuick()
             blk.CanCollide = false
             blk.Material = Enum.Material.Neon
             blk.Transparency = 0.5
-            blk.Color = Color3.fromRGB(255,255,255)
+            blk.Color = Color3.fromRGB(0,170,255) -- สีฟ้า
             blk.Parent = workspace
             table.insert(blocks, blk)
         end
@@ -848,7 +855,6 @@ local function SnapQuick()
         end
     end)
 
-    -- เริ่มมุด
     hum.Sit = true
     local origY = hrp.Position.Y
     local offset = math.abs(SnapHeightOffset)
@@ -882,6 +888,7 @@ CheaterTab:Button({
     Callback=function() SnapQuick() end
 })
 
+-- Slider Snap Depth
 CheaterTab:Slider({
     Title="Snap Depth",
     Step=1,
@@ -891,6 +898,7 @@ CheaterTab:Slider({
     end
 })
 
+-- Dropdown Snap Direction
 CheaterTab:Dropdown({
     Title="Snap Direction",
     Values={"Down","Up"},
