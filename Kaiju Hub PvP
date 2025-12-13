@@ -98,12 +98,10 @@ local IgnorePlayers = {}
 local CurrentTarget, head, aimPos
 local hue = 0
 
--- ปืนที่รองรับ
 local GunNames = {"P226","MP5","M24","Draco","Glock","Sawnoff","Uzi","G3","C9","Hunting Rifle","Anaconda","AK47","Remington","Double Barrel"}
 local GunLookup = {}
 for _, name in pairs(GunNames) do GunLookup[name] = true end
 
--- FOV Circle
 local fovCircle = Drawing.new("Circle")
 fovCircle.Thickness = 1
 fovCircle.NumSides = 100
@@ -112,14 +110,10 @@ fovCircle.Filled = false
 fovCircle.Visible = SilentAimEnabledValue.Value
 fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
--- Tracer
 local tracerLine = Drawing.new("Line")
 tracerLine.Thickness = 1
 tracerLine.Visible = false
 
--- ====================
--- คาดเดาตำแหน่ง
--- ====================
 local PREDICTION_FACTOR = 0.165
 
 local function PredictPosition(headPart)
@@ -129,7 +123,6 @@ local function PredictPosition(headPart)
     local velocity = root.Velocity
     local prediction = headPart.Position + (velocity * PREDICTION_FACTOR)
 
-    -- รองรับรถ (เพิ่ม Velocity รถ x1.2)
     local seat = root:FindFirstChildWhichIsA("WeldConstraint") or root:FindFirstChildWhichIsA("Weld")
     if seat and seat.Part0 then
         prediction = headPart.Position + (seat.Part0.Velocity * PREDICTION_FACTOR * 1.2)
@@ -147,7 +140,6 @@ local function AntiLockPrediction(part)
 
     local headPos = part.Position + Vector3.new(0, (part:IsA("BasePart") and part.Size.Y or 1)/2, 0)
 
-    -- ถ้าเปิด Attack Anti Kill คืนตำแหน่งตรง ๆ
     if AttackAntiKillEnabledValue.Value then
         return headPos
     end
@@ -155,7 +147,6 @@ local function AntiLockPrediction(part)
     if AttackAntiLockEnabledValue.Value then
         local speed = root and root.Velocity.Magnitude or 0
         local factor = (speed >= 14) and 6 or 0
-        -- ตรวจจับทิศทางเดินแบบสี่มุม (x,z)
         local vel = root.Velocity
         local x = vel.X
         local z = vel.Z
@@ -171,7 +162,6 @@ local function AntiLockPrediction(part)
     end
 end
 
--- ฟังก์ชัน Ignore
 local function IsIgnored(plr)
     for _, name in ipairs(IgnorePlayers) do
         if string.lower(plr.Name) == string.lower(name) then
@@ -181,7 +171,6 @@ local function IsIgnored(plr)
     return false
 end
 
--- หาเป้าหมายใกล้ FOV
 local function GetClosestTarget()
     local closest
     local shortest = math.huge
@@ -206,7 +195,6 @@ local function GetClosestTarget()
     return closest
 end
 
--- เช็คว่าถือปืน
 local function IsHoldingAllowedGun(args)
     local ok, weapon = pcall(function() return args[3] end)
     if ok and typeof(weapon) == "Instance" and GunLookup[weapon.Name] then return true end
@@ -218,7 +206,6 @@ local function IsHoldingAllowedGun(args)
     return false
 end
 
--- ตรวจกำแพง
 local function IsBehindWall(targetHead)
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Head") then return false end
     local origin = LocalPlayer.Character.Head.Position
@@ -230,7 +217,6 @@ local function IsBehindWall(targetHead)
     return result and result.Instance and not result.Instance:IsDescendantOf(targetHead.Parent)
 end
 
--- Hook ยิง
 local send = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Send")
 local oldFire
 oldFire = hookfunction(send.FireServer, function(self, ...)
@@ -266,7 +252,6 @@ oldFire = hookfunction(send.FireServer, function(self, ...)
     return oldFire(self, unpack(args))
 end)
 
--- Render FOV + Tracer
 RunService.RenderStepped:Connect(function()
     fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     fovCircle.Radius = FOVRadiusValue.Value
@@ -298,7 +283,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- UI Controls
 CombatTab:Toggle({
     Title = "Silent Aim",
     Value = SilentAimEnabledValue.Value,
