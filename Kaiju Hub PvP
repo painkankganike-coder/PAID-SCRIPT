@@ -443,7 +443,7 @@ CheaterTab:Toggle({
 })
 
 
-CheaterTab:Divider()
+CheaterTab:Space()
 
 -- ฟังก์ชันลบ BillboardGui ทุกตัวในตัวละคร
 local function RemoveBillboardGui()
@@ -457,7 +457,6 @@ local function RemoveBillboardGui()
     end
 end
 
--- Toggle Hide Name
 CheaterTab:Toggle({
     Title = "Hide Name",
     Value = HideNameEnabled,
@@ -469,7 +468,6 @@ CheaterTab:Toggle({
     end
 })
 
--- อัปเดต BillboardGui ทุกเฟรม (Realtime)
 RunService.RenderStepped:Connect(function()
     if HideNameEnabled and LocalPlayer.Character then
         for _, gui in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -480,7 +478,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ตรวจจับตอน Spawn ใหม่
 LocalPlayer.CharacterAdded:Connect(function(char)
     if HideNameEnabled then
         -- ตรวจสอบทุกตัวลูกที่ถูกสร้างใน Character ใหม่
@@ -490,7 +487,6 @@ LocalPlayer.CharacterAdded:Connect(function(char)
             end
         end)
         
-        -- ลบที่มีอยู่แล้วใน Character
         RemoveBillboardGui()
     end
 end)
@@ -524,14 +520,12 @@ CheaterTab:Toggle({
     end
 })
 
--- ตัวแปร
 local UndergroundEnabled = false
-local UndergroundAutoEnabled = true -- toggle เปิด/ปิด
-local UndergroundDepth = 50       -- ความลึก
-local SpinSpeed = 2080            -- ความเร็วหมุนรอบตัว
-local UndergroundAngle = 0        -- มุมหมุน
+local UndergroundAutoEnabled = true
+local UndergroundDepth = 50
+local SpinSpeed = 2080
+local UndergroundAngle = 0
 
--- ฟังก์ชันเริ่มมุด
 local function StartUnderground()
     local char = LocalPlayer.Character
     if not char then return end
@@ -555,12 +549,10 @@ local function StartUnderground()
         local offsetZ = math.sin(rad) * 6
         local newPos = Vector3.new(hrp.Position.X + offsetX, initialY, hrp.Position.Z + offsetZ)
 
-        -- หมุนหันไปจุดเดิมกลางตัว
         hrp.CFrame = CFrame.new(newPos, Vector3.new(hrp.Position.X, initialY, hrp.Position.Z))
     end)
 end
 
--- ฟังก์ชันหยุดมุด
 local function StopUnderground()
     UndergroundEnabled = false
 end
@@ -580,14 +572,12 @@ local function AntiRagdoll()
     end
 end
 
--- อัปเดตทุกเฟรม
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
     local humanoid = char:FindFirstChild("Humanoid")
     if not humanoid then return end
 
-    -- Underground Auto
     if UndergroundAutoEnabled then
         if humanoid.Health < 16 and humanoid.Health > 0 then
             if not UndergroundEnabled then StartUnderground() end
@@ -596,11 +586,9 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Anti Ragdoll
     AntiRagdoll()
 end)
 
--- Toggle ปุ่ม UI
 CheaterTab:Toggle({
     Title = "Anti Kill",
     Value = UndergroundAutoEnabled,
