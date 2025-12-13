@@ -770,85 +770,37 @@ CheaterTab:Toggle({
     end
 })
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local LocalPlayer = Players.LocalPlayer
-
-local InfiniteStaminaEnabled = false
-local AutoSprintLoop
-local OriginalSprintUpdate
-
-local SprintModule
-local success
-success, SprintModule = pcall(function()
-    return require(ReplicatedStorage.Modules.Game.Sprint)
-end)
-if not success or not SprintModule then
-    warn("❌ SprintModule ไม่พบ!")
-    return
-end
-
+local replicated = game:GetService("ReplicatedStorage")
+local SprintModule = require(replicated.Modules.Game.Sprint)
 local consume_stamina = SprintModule.consume_stamina
-local sprintData = debug.getupvalue(consume_stamina, 2)
-if not sprintData or not sprintData.sprint_bar then
-    warn("❌ SprintBar ไม่พบ!")
-    return
+local SprintBar = debug.getupvalue(consume_stamina, 2).sprint_bar
+
+-- ฟังก์ชัน global สำหรับเช็คค่า
+local function c()
+    return getgenv()
 end
 
-local SprintBar = sprintData.sprint_bar
-local OldUpdate
-OldUpdate = hookfunction(SprintBar.update, function(...)
-    if InfiniteStaminaEnabled then
-        return OldUpdate(function() return 1 end)
+c().Infinitestamina = false -- เริ่มปิดก่อน
+
+-- Hook SprintBar.update
+local Old
+Old = hookfunction(SprintBar.update, function(...)
+    if c().Infinitestamina then
+        return Old(function() return 1 end)
     else
-        return OldUpdate(...)
+        return Old(...)
     end
 end)
-
-local function EnableInfiniteStamina()
-    InfiniteStaminaEnabled = true
-
-    -- Auto Sprint Loop
-    AutoSprintLoop = task.spawn(function()
-        while InfiniteStaminaEnabled do
-            pcall(function()
-                local Send = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Send")
-                if Send then
-                    Send:FireServer("set_sprinting_1", true)
-                    task.wait(0.5)
-                    Send:FireServer("set_sprinting_1", false)
-                end
-            end)
-            task.wait(0.1)
-        end
-    end)
-
-    print("✅ Infinite Stamina เปิดแล้ว! 🏃‍♂️💨")
-end
-
-local function DisableInfiniteStamina()
-    InfiniteStaminaEnabled = false
-    if AutoSprintLoop then
-        task.cancel(AutoSprintLoop)
-        AutoSprintLoop = nil
-    end
-    -- Reset Sprint
-    local Send = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Send")
-    if Send then
-        Send:FireServer("set_sprinting_1", false)
-    end
-    print("❌ Infinite Stamina ปิดแล้ว!")
-end
 
 CheaterTab:Toggle({
     Title = "Infinite Stamina",
-    Default = false,
+    Value = c().Infinitestamina,
     Callback = function(state)
+        c().Infinitestamina = state
         if state then
-            EnableInfiniteStamina()
+            print("✅ Infinite Stamina ON")
         else
-            DisableInfiniteStamina()
+            print("❌ Infinite Stamina OFF")
         end
     end
 })
