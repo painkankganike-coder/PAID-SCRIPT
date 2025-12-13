@@ -535,7 +535,7 @@ CheaterTab:Toggle({
 -- ตัวแปร
 local UndergroundEnabled = false
 local UndergroundAutoEnabled = true -- toggle เปิด/ปิด
-local UndergroundDepth = 50       -- ความลึก
+local UndergroundDepth = 70       -- ความลึก
 local SpinSpeed = 2080            -- ความเร็วหมุนรอบตัว
 local UndergroundAngle = 0        -- มุมหมุน
 
