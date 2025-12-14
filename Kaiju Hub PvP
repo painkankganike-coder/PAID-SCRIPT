@@ -985,37 +985,81 @@ CheaterTab:Toggle({
     end
 })
 
-local replicated = game:GetService("ReplicatedStorage")
-local SprintModule = require(replicated.Modules.Game.Sprint)
-local consume_stamina = SprintModule.consume_stamina
-local SprintBar = debug.getupvalue(consume_stamina, 2).sprint_bar
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
--- ฟังก์ชัน global สำหรับเช็คค่า
-local function c()
-    return getgenv()
+local LocalPlayer = Players.LocalPlayer
+local SprintBar
+local Loop
+local SprintEnabled = false
+
+local Remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Send")
+local function Send(...)
+    pcall(function()
+        Remote:FireServer(...)
+    end)
 end
 
-c().Infinitestamina = false -- เริ่มปิดก่อน
-
--- Hook SprintBar.update
-local Old
-Old = hookfunction(SprintBar.update, function(...)
-    if c().Infinitestamina then
-        return Old(function() return 1 end)
-    else
-        return Old(...)
+local function Load()
+    local ok, mod = pcall(function()
+        return require(ReplicatedStorage.Modules.Game.Sprint)
+    end)
+    if ok and mod.sprint_bar then
+        SprintBar = mod.sprint_bar
+        return true
     end
+end
+
+local function Enable()
+    if not Load() then return end
+    if Loop then Loop:Disconnect() Loop = nil end
+    Loop = RunService.Heartbeat:Connect(function()
+        if SprintBar then
+            SprintBar.set(1)
+        end
+        local c = LocalPlayer.Character
+        local h = c and c:FindFirstChild("Humanoid")
+        if h and h.MoveDirection.Magnitude > 0.1 then
+            Send("set_sprinting_1", true)
+        else
+            Send("set_sprinting_1", false)
+        end
+    end)
+end
+
+local function Disable()
+    if Loop then
+        Loop:Disconnect()
+        Loop = nil
+    end
+    Send("set_sprinting_1", false)
+end
+
+-- เปิดใช้งานตอนเริ่มเกม
+task.wait(3)
+if SprintEnabled then Enable() end
+
+-- รีเซ็ตตอน respawn
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(2)
+    if SprintEnabled then Enable() end
+end)
+
+-- ป้องกันสคริปต์ถูกลบ
+game:GetService("ScriptContext").ScriptRemoving:Connect(function()
+    Disable()
 end)
 
 CheaterTab:Toggle({
-    Title = "Infinite Stamina",
-    Value = c().Infinitestamina,
+    Title = "Infinite Sprint",
+    Value = SprintEnabled,
     Callback = function(state)
-        c().Infinitestamina = state
+        SprintEnabled = state
         if state then
-            print("✅ Infinite Stamina ON")
+            Enable()
         else
-            print("❌ Infinite Stamina OFF")
+            Disable()
         end
     end
 })
