@@ -387,6 +387,62 @@ local HideNameEnabled = false
 local AntiLookEnabled = false
 local AntiRagdollEnabled = false
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Data_upvr = require(ReplicatedStorage.Modules.Core.Data) -- โมดูล Data ของเกม
+
+-- สร้างปุ่มสำหรับดูเงิน ATM
+local bankButton = CheaterTab:Button({
+    Title = "🏦 Bank Balance :",
+    Desc = "<font color=\"rgb(0,255,255)\">$0</font>", -- สีฟ้าสดใส
+    Locked = false,
+    Callback = function()
+        -- ไม่ต้องทำอะไรเมื่อกด
+    end
+})
+
+-- สร้างปุ่มสำหรับดูเงินในมือ
+local handButton = CheaterTab:Button({
+    Title = "💵 Hand Balance :",
+    Desc = "<font color=\"rgb(0,255,0)\">$0</font>", -- สีเขียวสดใส
+    Locked = false,
+    Callback = function()
+        -- ไม่ต้องทำอะไรเมื่อกด
+    end
+})
+
+-- ฟังก์ชันดึงจำนวนเงิน ATM
+local function GetBankMoney()
+    if Data_upvr.money and type(Data_upvr.money.bank) == "number" then
+        return Data_upvr.money.bank
+    else
+        return 0
+    end
+end
+
+-- ฟังก์ชันดึงจำนวนเงินในมือ
+local function GetHandMoney()
+    if Data_upvr.money and type(Data_upvr.money.hand) == "number" then
+        return Data_upvr.money.hand
+    else
+        return 0
+    end
+end
+
+-- อัปเดต Desc ทุกเฟรม
+RunService.RenderStepped:Connect(function()
+    if bankButton and bankButton.SetDesc then
+        local bankMoney = GetBankMoney()
+        bankButton:SetDesc(("<font color=\"rgb(0,255,255)\">$%s</font>"):format(tostring(bankMoney)))
+    end
+    if handButton and handButton.SetDesc then
+        local handMoney = GetHandMoney()
+        handButton:SetDesc(("<font color=\"rgb(0,255,0)\">$%s</font>"):format(tostring(handMoney)))
+    end
+end)
+
+CheaterTab:Section({Title="Cheater :"})
+
 CheaterTab:Slider({
     Title = "Speed Multiplier :",
     Value = {Min = 0.00, Max = 0.15, Default = speedMultiplier},
@@ -493,6 +549,8 @@ CheaterTab:Button({
         end)
     end
 })
+
+CheaterTab:Space()
 
 -- Toggle Hide Name
 CheaterTab:Toggle({
