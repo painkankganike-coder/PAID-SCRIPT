@@ -478,6 +478,33 @@ end)
 
 CheaterTab:Space()
 
+local flagName = "NextGenReplicatorEnabledWrite4"
+local loopFFlag = false
+
+local function StartFFlagLoop()
+    if loopFFlag then return end
+    loopFFlag = true
+    task.spawn(function()
+        while loopFFlag do
+            pcall(function()
+                setfflag(flagName, "false")
+            end)
+            task.wait(1)
+            pcall(function()
+                setfflag(flagName, "true")
+            end)
+            task.wait(60)
+        end
+    end)
+end
+
+CheaterTab:Button({
+    Title = "invisible",
+    Callback = function()
+        StartFFlagLoop()
+    end
+})
+
 local function RemoveBillboardGui()
     local char = LocalPlayer.Character
     if char then
