@@ -777,7 +777,94 @@ CheaterTab:Toggle({
     end
 })
 
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
+local LocalPlayer = Players.LocalPlayer
+local SprintBar
+local Loop
+local SprintEnabled = false
+
+local Remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Send")
+local function Send(...)
+    pcall(function()
+        Remote:FireServer(...)
+    end)
+end
+
+local function TryLoadSprintBar()
+    local ok, mod = pcall(function()
+        return require(ReplicatedStorage.Modules.Game.Sprint)
+    end)
+    if not ok or not mod then return false end
+
+    -- ตรวจสอบทั้งกรณี sprint_bar อยู่ตรง ๆ
+    if rawget(mod, "sprint_bar") then
+        SprintBar = mod.sprint_bar
+        return true
+    end
+
+    -- ตรวจสอบกรณี sprint_bar อยู่ใน function upvalue
+    for _, f in pairs(getgc(true)) do
+        if type(f) == "function" then
+            local success, up = pcall(function()
+                return debug.getupvalue(f, 2)
+            end)
+            if success and up and up.sprint_bar then
+                SprintBar = up.sprint_bar
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function EnableSprint()
+    if not SprintBar and not TryLoadSprintBar() then return end
+    if Loop then Loop:Disconnect() Loop = nil end
+    Loop = RunService.Heartbeat:Connect(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if SprintBar then
+            pcall(function() SprintBar.set(1) end)
+        end
+        if humanoid and humanoid.MoveDirection.Magnitude > 0.1 then
+            Send("set_sprinting_1", true)
+        else
+            Send("set_sprinting_1", false)
+        end
+    end)
+end
+
+local function DisableSprint()
+    if Loop then
+        Loop:Disconnect()
+        Loop = nil
+    end
+    Send("set_sprinting_1", false)
+end
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1)
+    if SprintEnabled then
+        EnableSprint()
+    end
+end)
+
+CheaterTab:Toggle({
+    Title = "Infinite Sprint",
+    Value = SprintEnabled,
+    Callback = function(state)
+        SprintEnabled = state
+        if state then
+            EnableSprint()
+        else
+            DisableSprint()
+        end
+    end
+})
 
 CheaterTab:Divider()
 CheaterTab:Section({Title="Snap PC key [ Z ]"})
