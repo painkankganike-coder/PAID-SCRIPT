@@ -372,7 +372,7 @@ local safePlayersDropdown = CombatTab:Dropdown({
 })
 
 CombatTab:Button({
-    Title = "🔁Safeayer List",
+    Title = "🔁Safe player List",
     Callback = function()
         local newValues = UpdatePlayerNames()
         safePlayersDropdown:SetValues(newValues)
