@@ -380,7 +380,6 @@ CombatTab:Button({
     end
 })
 
-
 local SpeedEnabled = false
 local speedMultiplier = 0.10
 local JumpEnabled = false
@@ -478,43 +477,22 @@ end)
 
 CheaterTab:Space()
 
-local flagName = "NextGenReplicatorEnabledWrite4"
-local loopFFlag = false
-
-local function StartFFlagLoop()
-    if loopFFlag then return end
-    loopFFlag = true
-    task.spawn(function()
-        while loopFFlag do
-            pcall(function()
-                setfflag(flagName, "false")
-            end)
-            task.wait(1)
-            pcall(function()
-                setfflag(flagName, "true")
-            end)
-            task.wait(60)
-        end
-    end)
-end
-
 CheaterTab:Button({
     Title = "invisible",
+    Desc = "กดปุ่มล่องหนแล้ว รีเซ็ตตัวเพื่อใช้งานได้ทันที ถ้าหายทำอีกรอบ 🛡️",
     Callback = function()
-        StartFFlagLoop()
+        WindUI:Notify({
+            Title = "invisible ✅",
+            Content = "Invisibility is now working.🛡️🛡️",
+            Icon = "shield",
+        })
+        task.spawn(function()
+            setfflag("NextGenReplicatorEnabledWrite4", "false")
+            wait(5)
+            setfflag("NextGenReplicatorEnabledWrite4", "true")
+        end)
     end
 })
-
-local function RemoveBillboardGui()
-    local char = LocalPlayer.Character
-    if char then
-        for _, gui in pairs(char:GetDescendants()) do
-            if gui:IsA("BillboardGui") then
-                gui:Destroy()
-            end
-        end
-    end
-end
 
 -- Toggle Hide Name
 CheaterTab:Toggle({
