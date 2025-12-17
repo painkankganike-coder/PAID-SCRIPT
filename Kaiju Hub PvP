@@ -1111,6 +1111,7 @@ EspTab:Toggle({
     end      
 })
 
+-- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -1118,31 +1119,27 @@ local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 
--- สีสำหรับกระสุน
-local AMMO_HIGHLIGHT_COLOR = Color3.fromRGB(0, 255, 0)  -- สีเขียว
-local AMMO_NAME_COLOR = Color3.fromRGB(0, 255, 0)       -- สีเขียว
-local AMMO_DISTANCE_COLOR = Color3.fromRGB(255, 215, 0) -- สีทอง
-
-local AmmoESP_Enabled = false
-local ESP_Ammo = {}
-
--- โฟลเดอร์ของตก
+-- โฟลเดอร์ของของตก
 local droppedFolder = Workspace:FindFirstChild("DroppedItem") or Workspace:FindFirstChild("DroppedItems")
 if not droppedFolder then
     warn("ไม่พบโฟลเดอร์ DroppedItem / DroppedItems")
     return
 end
 
--- ฟังก์ชันสร้าง ESP ให้กระสุน
+local AmmoESP_Enabled = false
+local ESP_Ammo = {}
+
+local AMMO_HIGHLIGHT_COLOR = Color3.fromRGB(0, 255, 0)
+local AMMO_NAME_COLOR = Color3.fromRGB(0, 255, 0)
+local AMMO_DISTANCE_COLOR = Color3.fromRGB(255, 215, 0)
+
 local function createAmmoESP(ammo)
     if not AmmoESP_Enabled then return end
     if ESP_Ammo[ammo] then return end
     if ammo.Name ~= "Pistol Ammo" then return end
-    if not ammo:FindFirstChild("Handle") and not ammo.PrimaryPart then return end
-
     local handle = ammo:FindFirstChild("Handle") or ammo.PrimaryPart
+    if not handle then return end
 
-    -- Highlight
     local highlight = Instance.new("Highlight")
     highlight.FillColor = AMMO_HIGHLIGHT_COLOR
     highlight.OutlineColor = AMMO_HIGHLIGHT_COLOR
@@ -1151,7 +1148,6 @@ local function createAmmoESP(ammo)
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = ammo
 
-    -- ชื่อ
     local nameText = Drawing.new("Text")
     nameText.Size = 7
     nameText.Color = AMMO_NAME_COLOR
@@ -1161,7 +1157,6 @@ local function createAmmoESP(ammo)
     nameText.Visible = true
     nameText.Text = ammo.Name
 
-    -- ระยะ
     local distanceText = Drawing.new("Text")
     distanceText.Size = 7
     distanceText.Color = AMMO_DISTANCE_COLOR
@@ -1172,31 +1167,23 @@ local function createAmmoESP(ammo)
 
     ESP_Ammo[ammo] = {highlight = highlight, name = nameText, distance = distanceText, handle = handle}
 
-    -- ลบถ้าไอเทมหาย
     ammo.AncestryChanged:Connect(function()
-        if not ammo.Parent then
-            if ESP_Ammo[ammo] then
-                highlight:Destroy()
-                nameText:Remove()
-                distanceText:Remove()
-                ESP_Ammo[ammo] = nil
-            end
+        if not ammo.Parent and ESP_Ammo[ammo] then
+            highlight:Destroy()
+            nameText:Remove()
+            distanceText:Remove()
+            ESP_Ammo[ammo] = nil
         end
     end)
 end
 
--- เปิด ESP กระสุน
 local function enableAmmoESP()
     AmmoESP_Enabled = true
     for _, ammo in pairs(droppedFolder:GetChildren()) do
-        task.spawn(function()
-            task.wait(0.2)
-            createAmmoESP(ammo)
-        end)
+        createAmmoESP(ammo)
     end
 end
 
--- ปิด ESP กระสุน
 local function disableAmmoESP()
     AmmoESP_Enabled = false
     for ammo, data in pairs(ESP_Ammo) do
@@ -1215,18 +1202,15 @@ RunService.Heartbeat:Connect(function()
 
     for ammo, data in pairs(ESP_Ammo) do
         if ammo and ammo.Parent and data.handle and data.handle.Parent then
-            local worldPos = data.handle.Position + Vector3.new(0, 2, 0)
+            local worldPos = data.handle.Position + Vector3.new(0,2,0)
             local screenPos, onScreen = camera:WorldToViewportPoint(worldPos)
-
             if onScreen then
                 local screen2D = Vector2.new(screenPos.X, screenPos.Y)
                 local distance = math.floor((rootPos - data.handle.Position).Magnitude)
-
                 data.name.Position = screen2D
                 data.name.Visible = true
-
-                data.distance.Position = screen2D + Vector2.new(0, 18)
-                data.distance.Text = distance .. "m"
+                data.distance.Position = screen2D + Vector2.new(0, 12)
+                data.distance.Text = distance.."m"
                 data.distance.Visible = true
             else
                 data.name.Visible = false
@@ -1241,105 +1225,59 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- เมื่อมีของตกใหม่
-droppedFolder.ChildAdded:Connect(function(ammo)
-    if not AmmoESP_Enabled then return end
-    task.wait(0.3)
-    createAmmoESP(ammo)
+droppedFolder.ChildAdded:Connect(function(item)
+    task.wait(0.5)
+    createAmmoESP(item)
 end)
 
-EspTab:Toggle({
-    Title = "Ammo",
-    Value = AmmoESP_Enabled,
-    Callback = function(state)
-        AmmoESP_Enabled = state
-        if state then
-            enableAmmoESP()
-        else
-            disableAmmoESP()
-        end
-    end
-})
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-
-local player = Players.LocalPlayer
-local camera = Workspace.CurrentCamera
-
-local ESP_Money = {}  -- เก็บ Highlight + Drawing สำหรับ Money
 local MoneyESP_Enabled = false
+local ESP_Money = {}
 
--- สีเขียวสดใส
-local HIGHLIGHT_COLOR = Color3.fromRGB(0, 255, 0)
-local TEXT_COLOR = Color3.fromRGB(0, 255, 0)
+local MONEY_HIGHLIGHT_COLOR = Color3.fromRGB(0,255,0)
+local MONEY_NAME_COLOR = Color3.fromRGB(0,255,0)
 
--- โฟลเดอร์ของตก
-local droppedFolder = Workspace:FindFirstChild("DroppedItem") or Workspace:FindFirstChild("DroppedItems")
-if not droppedFolder then
-    warn("ไม่พบโฟลเดอร์ DroppedItem / DroppedItems")
-    return
-end
-
--- ฟังก์ชันสร้าง ESP สำหรับ Money 1 ชิ้น
 local function createMoneyESP(item)
+    if not MoneyESP_Enabled then return end
     if ESP_Money[item] then return end
     if item.Name ~= "Money" then return end
+    local handle = item:FindFirstChild("Handle") or item.PrimaryPart or item:FindFirstChildOfClass("Part")
+    if not handle then return end
 
-    local mainPart = item:FindFirstChild("Handle") or item.PrimaryPart or item:FindFirstChildOfClass("Part")
-    if not mainPart then return end
-
-    -- Highlight
     local highlight = Instance.new("Highlight")
-    highlight.FillColor = HIGHLIGHT_COLOR
-    highlight.OutlineColor = HIGHLIGHT_COLOR
+    highlight.FillColor = MONEY_HIGHLIGHT_COLOR
+    highlight.OutlineColor = MONEY_HIGHLIGHT_COLOR
     highlight.FillTransparency = 0.3
     highlight.OutlineTransparency = 0
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = item
 
-    -- ชื่อ Money
     local nameText = Drawing.new("Text")
-    nameText.Size = 16
-    nameText.Color = TEXT_COLOR
+    nameText.Size = 7
+    nameText.Color = MONEY_NAME_COLOR
     nameText.Center = true
     nameText.Outline = true
     nameText.Font = 2
     nameText.Visible = true
     nameText.Text = item.Name
 
-    ESP_Money[item] = {
-        highlight = highlight,
-        name = nameText,
-        mainPart = mainPart
-    }
+    ESP_Money[item] = {highlight = highlight, name = nameText, handle = handle}
 
-    -- ลบเมื่อ Money หาย
     item.AncestryChanged:Connect(function()
-        if not item.Parent then
-            if ESP_Money[item] then
-                highlight:Destroy()
-                nameText:Remove()
-                ESP_Money[item] = nil
-            end
+        if not item.Parent and ESP_Money[item] then
+            highlight:Destroy()
+            nameText:Remove()
+            ESP_Money[item] = nil
         end
     end)
 end
 
--- ฟังก์ชันเปิด Money ESP
 local function enableMoneyESP()
     MoneyESP_Enabled = true
     for _, item in pairs(droppedFolder:GetChildren()) do
-        if item.Name == "Money" then
-            task.spawn(function()
-                task.wait(0.3)
-                createMoneyESP(item)
-            end)
-        end
+        createMoneyESP(item)
     end
 end
 
--- ฟังก์ชันปิด Money ESP
 local function disableMoneyESP()
     MoneyESP_Enabled = false
     for item, data in pairs(ESP_Money) do
@@ -1349,17 +1287,14 @@ local function disableMoneyESP()
     ESP_Money = {}
 end
 
--- อัปเดตตำแหน่งชื่อทุกเฟรม
 RunService.Heartbeat:Connect(function()
     if not MoneyESP_Enabled then return end
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
-    local rootPos = player.Character.HumanoidRootPart.Position
 
     for item, data in pairs(ESP_Money) do
-        if item and item.Parent and data.mainPart and data.mainPart.Parent then
-            local worldPos = data.mainPart.Position + Vector3.new(0, 2, 0)
+        if item and item.Parent and data.handle and data.handle.Parent then
+            local worldPos = data.handle.Position + Vector3.new(0,2,0)
             local screenPos, onScreen = camera:WorldToViewportPoint(worldPos)
-
             if onScreen then
                 data.name.Position = Vector2.new(screenPos.X, screenPos.Y)
                 data.name.Visible = true
@@ -1374,27 +1309,27 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- เมื่อมี Money ใหม่เข้ามา
 droppedFolder.ChildAdded:Connect(function(item)
-    if not MoneyESP_Enabled then return end
-    if item.Name == "Money" then
-        task.wait(0.5)
-        createMoneyESP(item)
-    end
+    task.wait(0.5)
+    createMoneyESP(item)
 end)
+
+EspTab:Toggle({
+    Title = "Ammo",
+    Value = AmmoESP_Enabled,
+    Callback = function(state)
+        if state then enableAmmoESP() else disableAmmoESP() end
+    end
+})
 
 EspTab:Toggle({
     Title = "Money",
     Value = MoneyESP_Enabled,
     Callback = function(state)
-        MoneyESP_Enabled = state
-        if state then
-            enableMoneyESP()   -- ฟังก์ชันเปิด ESP
-        else
-            disableMoneyESP()  -- ฟังก์ชันปิด ESP
-        end
+        if state then enableMoneyESP() else disableMoneyESP() end
     end
 })
+
 local FireRateValue = Instance.new("NumberValue")
 FireRateValue.Name = "FireRateValue"
 FireRateValue.Value = 1500
