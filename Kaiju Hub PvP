@@ -1126,110 +1126,6 @@ if not droppedFolder then
     return
 end
 
-local AmmoESP_Enabled = false
-local ESP_Ammo = {}
-
-local AMMO_HIGHLIGHT_COLOR = Color3.fromRGB(0, 255, 0)
-local AMMO_NAME_COLOR = Color3.fromRGB(0, 255, 0)
-local AMMO_DISTANCE_COLOR = Color3.fromRGB(255, 215, 0)
-
-local function createAmmoESP(ammo)
-    if not AmmoESP_Enabled then return end
-    if ESP_Ammo[ammo] then return end
-    if ammo.Name ~= "Pistol Ammo" then return end
-    local handle = ammo:FindFirstChild("Handle") or ammo.PrimaryPart
-    if not handle then return end
-
-    local highlight = Instance.new("Highlight")
-    highlight.FillColor = AMMO_HIGHLIGHT_COLOR
-    highlight.OutlineColor = AMMO_HIGHLIGHT_COLOR
-    highlight.FillTransparency = 0.3
-    highlight.OutlineTransparency = 0
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Parent = ammo
-
-    local nameText = Drawing.new("Text")
-    nameText.Size = 7
-    nameText.Color = AMMO_NAME_COLOR
-    nameText.Center = true
-    nameText.Outline = true
-    nameText.Font = 2
-    nameText.Visible = true
-    nameText.Text = ammo.Name
-
-    local distanceText = Drawing.new("Text")
-    distanceText.Size = 7
-    distanceText.Color = AMMO_DISTANCE_COLOR
-    distanceText.Center = true
-    distanceText.Outline = true
-    distanceText.Font = 2
-    distanceText.Visible = true
-
-    ESP_Ammo[ammo] = {highlight = highlight, name = nameText, distance = distanceText, handle = handle}
-
-    ammo.AncestryChanged:Connect(function()
-        if not ammo.Parent and ESP_Ammo[ammo] then
-            highlight:Destroy()
-            nameText:Remove()
-            distanceText:Remove()
-            ESP_Ammo[ammo] = nil
-        end
-    end)
-end
-
-local function enableAmmoESP()
-    AmmoESP_Enabled = true
-    for _, ammo in pairs(droppedFolder:GetChildren()) do
-        createAmmoESP(ammo)
-    end
-end
-
-local function disableAmmoESP()
-    AmmoESP_Enabled = false
-    for ammo, data in pairs(ESP_Ammo) do
-        if data.highlight then data.highlight:Destroy() end
-        if data.name then data.name:Remove() end
-        if data.distance then data.distance:Remove() end
-    end
-    ESP_Ammo = {}
-end
-
--- อัปเดตตำแหน่งทุกเฟรม
-RunService.Heartbeat:Connect(function()
-    if not AmmoESP_Enabled then return end
-    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
-    local rootPos = player.Character.HumanoidRootPart.Position
-
-    for ammo, data in pairs(ESP_Ammo) do
-        if ammo and ammo.Parent and data.handle and data.handle.Parent then
-            local worldPos = data.handle.Position + Vector3.new(0,2,0)
-            local screenPos, onScreen = camera:WorldToViewportPoint(worldPos)
-            if onScreen then
-                local screen2D = Vector2.new(screenPos.X, screenPos.Y)
-                local distance = math.floor((rootPos - data.handle.Position).Magnitude)
-                data.name.Position = screen2D
-                data.name.Visible = true
-                data.distance.Position = screen2D + Vector2.new(0, 12)
-                data.distance.Text = distance.."m"
-                data.distance.Visible = true
-            else
-                data.name.Visible = false
-                data.distance.Visible = false
-            end
-        else
-            if data.highlight then data.highlight:Destroy() end
-            if data.name then data.name:Remove() end
-            if data.distance then data.distance:Remove() end
-            ESP_Ammo[ammo] = nil
-        end
-    end
-end)
-
-droppedFolder.ChildAdded:Connect(function(item)
-    task.wait(0.5)
-    createAmmoESP(item)
-end)
-
 local MoneyESP_Enabled = false
 local ESP_Money = {}
 
@@ -1313,14 +1209,6 @@ droppedFolder.ChildAdded:Connect(function(item)
     task.wait(0.5)
     createMoneyESP(item)
 end)
-
-EspTab:Toggle({
-    Title = "Ammo",
-    Value = AmmoESP_Enabled,
-    Callback = function(state)
-        if state then enableAmmoESP() else disableAmmoESP() end
-    end
-})
 
 EspTab:Toggle({
     Title = "Money",
