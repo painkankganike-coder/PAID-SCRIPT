@@ -7,7 +7,7 @@ local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
     game:GetService("ReplicatedStorage")
 
 local Window = WindUI:CreateWindow({
-    Title = "Kaiju Hub | Pvp",
+    Title = "Kaiju Hub | Pvp Test",
     Icon = "gitlab",
     Author = "My Kaiju | BlockSpin | i love You :D !",
     Folder = "XINCOHubFolder",
@@ -25,13 +25,13 @@ Window:Tag({
 })
 
 Window:Tag({
-    Title = "v0.5.8",
+    Title = "v0.6.4",
     Color = Color3.fromHex("#2889F7"),
     Radius = 13,
 })
 
 Window:EditOpenButton({
-    Title = "Kaiju Hub",
+    Title = "Kaiju Hub PAID",
     Icon = "circle-ellipsis",
     CornerRadius = UDim.new(0,50),
     StrokeThickness = 3,
@@ -385,6 +385,9 @@ FireRateValue.Name = "FireRateValue"
 FireRateValue.Value = 1500
 FireRateValue.Parent = LocalPlayer
 
+local FireRateEnabled = false
+local updatedTools = {}
+
 WeaponTab:Slider({
     Title = "Fire Rate",
     Step = 1,
@@ -394,7 +397,17 @@ WeaponTab:Slider({
     end
 })
 
-local updatedTools = {}
+WeaponTab:Divider()
+WeaponTab:Section({Title="Use Apply guns:"})
+
+WeaponTab:Toggle({
+    Title = "Apply Fire Rate",
+    Value = false,
+    Callback = function(state)
+        FireRateEnabled = state
+    end
+})
+
 local function UpdateToolFireRate(tool)
     if not tool or updatedTools[tool] then return end
     updatedTools[tool] = true
@@ -421,20 +434,22 @@ task.spawn(function()
     end
 end)
 
--- Fire Rate ถาวร + Remote Update
+-- Fire Rate Loop (ถาวร + Remote) แต่ทำงานเฉพาะเมื่อเปิด Toggle
 task.spawn(function()
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local sendRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Send")
     while true do
-        for _, v in pairs(getgc(true)) do
-            if typeof(v) == "table" and rawget(v,"states") then
-                local s = v.states
-                if s.fire_rate and typeof(s.fire_rate) == "userdata" and s.fire_rate.set then
-                    s.fire_rate:set(FireRateValue.Value)
-                    if sendRemote then
-                        pcall(function()
-                            sendRemote:FireServer({fire_rate = FireRateValue.Value})
-                        end)
+        if FireRateEnabled then
+            for _, v in pairs(getgc(true)) do
+                if typeof(v) == "table" and rawget(v,"states") then
+                    local s = v.states
+                    if s.fire_rate and typeof(s.fire_rate) == "userdata" and s.fire_rate.set then
+                        s.fire_rate:set(FireRateValue.Value)
+                        if sendRemote then
+                            pcall(function()
+                                sendRemote:FireServer({fire_rate = FireRateValue.Value})
+                            end)
+                        end
                     end
                 end
             end
@@ -442,7 +457,6 @@ task.spawn(function()
         task.wait(0.25)
     end
 end)
-
 -- No Recoil
 local GunModule = require(ReplicatedStorage.Modules.Game.ItemTypes.Gun)
 getgenv().NoRecoilEnabled = false
