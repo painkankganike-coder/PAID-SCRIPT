@@ -1248,20 +1248,18 @@ droppedFolder.ChildAdded:Connect(function(ammo)
     createAmmoESP(ammo)
 end)
 
-local function addAmmoESP_Toggle(EspTab)
-    EspTab:Toggle({
-        Title = "Ammo",
-        Value = AmmoESP_Enabled,
-        Callback = function(state)
-            if state then
-                enableAmmoESP()
-            else
-                disableAmmoESP()
-            end
+EspTab:Toggle({
+    Title = "Ammo",
+    Value = AmmoESP_Enabled,
+    Callback = function(state)
+        AmmoESP_Enabled = state
+        if state then
+            enableAmmoESP()
+        else
+            disableAmmoESP()
         end
-    })
-end
-
+    end
+})
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -1385,20 +1383,18 @@ droppedFolder.ChildAdded:Connect(function(item)
     end
 end)
 
-local function addMoneyESP_Toggle(EspTab)
-    EspTab:Toggle({
-        Title = "Money",
-        Value = MoneyESP_Enabled,
-        Callback = function(state)
-            if state then
-                enableMoneyESP()
-            else
-                disableMoneyESP()
-            end
+EspTab:Toggle({
+    Title = "Money",
+    Value = MoneyESP_Enabled,
+    Callback = function(state)
+        MoneyESP_Enabled = state
+        if state then
+            enableMoneyESP()   -- ฟังก์ชันเปิด ESP
+        else
+            disableMoneyESP()  -- ฟังก์ชันปิด ESP
         end
-    })
-end
-
+    end
+})
 local FireRateValue = Instance.new("NumberValue")
 FireRateValue.Name = "FireRateValue"
 FireRateValue.Value = 1500
