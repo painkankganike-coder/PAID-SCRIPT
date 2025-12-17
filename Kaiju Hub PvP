@@ -1111,12 +1111,27 @@ EspTab:Toggle({
     end      
 })
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
+
+-- สีสำหรับกระสุน
 local AMMO_HIGHLIGHT_COLOR = Color3.fromRGB(0, 255, 0)  -- สีเขียว
 local AMMO_NAME_COLOR = Color3.fromRGB(0, 255, 0)       -- สีเขียว
 local AMMO_DISTANCE_COLOR = Color3.fromRGB(255, 215, 0) -- สีทอง
 
 local AmmoESP_Enabled = false
 local ESP_Ammo = {}
+
+-- โฟลเดอร์ของตก
+local droppedFolder = Workspace:FindFirstChild("DroppedItem") or Workspace:FindFirstChild("DroppedItems")
+if not droppedFolder then
+    warn("ไม่พบโฟลเดอร์ DroppedItem / DroppedItems")
+    return
+end
 
 -- ฟังก์ชันสร้าง ESP ให้กระสุน
 local function createAmmoESP(ammo)
@@ -1174,12 +1189,10 @@ end
 local function enableAmmoESP()
     AmmoESP_Enabled = true
     for _, ammo in pairs(droppedFolder:GetChildren()) do
-        if ammo:IsA("Model") or ammo:IsA("Tool") or ammo:IsA("Folder") then
-            task.spawn(function()
-                task.wait(0.3)
-                createAmmoESP(ammo)
-            end)
-        end
+        task.spawn(function()
+            task.wait(0.2)
+            createAmmoESP(ammo)
+        end)
     end
 end
 
@@ -1230,87 +1243,108 @@ end)
 
 -- เมื่อมีของตกใหม่
 droppedFolder.ChildAdded:Connect(function(ammo)
-    task.wait(0.5)
+    if not AmmoESP_Enabled then return end
+    task.wait(0.3)
     createAmmoESP(ammo)
 end)
 
-EspTab:Toggle({
-    Title = "Ammo",
-    Value = AmmoESP_Enabled,
-    Callback = function(state)
-        if state then
-            enableAmmoESP()
-        else
-            disableAmmoESP()
+local function addAmmoESP_Toggle(EspTab)
+    EspTab:Toggle({
+        Title = "Ammo",
+        Value = AmmoESP_Enabled,
+        Callback = function(state)
+            if state then
+                enableAmmoESP()
+            else
+                disableAmmoESP()
+            end
         end
-    end
-})
+    })
+end
 
--- สีสำหรับ Money
-local MONEY_HIGHLIGHT_COLOR = Color3.fromRGB(0, 255, 0)  -- สีเขียว
-local MONEY_NAME_COLOR = Color3.fromRGB(0, 255, 0)       -- สีเขียว
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
+local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
+
+local ESP_Money = {}  -- เก็บ Highlight + Drawing สำหรับ Money
 local MoneyESP_Enabled = false
-local ESP_Money = {}
 
-local function createMoneyESP(money)
-    if not MoneyESP_Enabled then return end
-    if ESP_Money[money] then return end
-    if money.Name ~= "Money" then return end
-    if not money:FindFirstChild("Handle") and not money.PrimaryPart then return end
+-- สีเขียวสดใส
+local HIGHLIGHT_COLOR = Color3.fromRGB(0, 255, 0)
+local TEXT_COLOR = Color3.fromRGB(0, 255, 0)
 
-    local handle = money:FindFirstChild("Handle") or money.PrimaryPart
+-- โฟลเดอร์ของตก
+local droppedFolder = Workspace:FindFirstChild("DroppedItem") or Workspace:FindFirstChild("DroppedItems")
+if not droppedFolder then
+    warn("ไม่พบโฟลเดอร์ DroppedItem / DroppedItems")
+    return
+end
+
+-- ฟังก์ชันสร้าง ESP สำหรับ Money 1 ชิ้น
+local function createMoneyESP(item)
+    if ESP_Money[item] then return end
+    if item.Name ~= "Money" then return end
+
+    local mainPart = item:FindFirstChild("Handle") or item.PrimaryPart or item:FindFirstChildOfClass("Part")
+    if not mainPart then return end
 
     -- Highlight
     local highlight = Instance.new("Highlight")
-    highlight.FillColor = MONEY_HIGHLIGHT_COLOR
-    highlight.OutlineColor = MONEY_HIGHLIGHT_COLOR
+    highlight.FillColor = HIGHLIGHT_COLOR
+    highlight.OutlineColor = HIGHLIGHT_COLOR
     highlight.FillTransparency = 0.3
     highlight.OutlineTransparency = 0
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Parent = money
+    highlight.Parent = item
 
-    -- ชื่อ
+    -- ชื่อ Money
     local nameText = Drawing.new("Text")
-    nameText.Size = 7
-    nameText.Color = MONEY_NAME_COLOR
+    nameText.Size = 16
+    nameText.Color = TEXT_COLOR
     nameText.Center = true
     nameText.Outline = true
     nameText.Font = 2
     nameText.Visible = true
-    nameText.Text = money.Name
+    nameText.Text = item.Name
 
-    ESP_Money[money] = {highlight = highlight, name = nameText, handle = handle}
+    ESP_Money[item] = {
+        highlight = highlight,
+        name = nameText,
+        mainPart = mainPart
+    }
 
-    -- ลบเมื่อไอเทมหาย
-    money.AncestryChanged:Connect(function()
-        if not money.Parent then
-            if ESP_Money[money] then
+    -- ลบเมื่อ Money หาย
+    item.AncestryChanged:Connect(function()
+        if not item.Parent then
+            if ESP_Money[item] then
                 highlight:Destroy()
                 nameText:Remove()
-                ESP_Money[money] = nil
+                ESP_Money[item] = nil
             end
         end
     end)
 end
 
--- เปิด ESP Money
+-- ฟังก์ชันเปิด Money ESP
 local function enableMoneyESP()
     MoneyESP_Enabled = true
-    for _, money in pairs(droppedFolder:GetChildren()) do
-        if money:IsA("Model") or money:IsA("Tool") or money:IsA("Folder") then
+    for _, item in pairs(droppedFolder:GetChildren()) do
+        if item.Name == "Money" then
             task.spawn(function()
                 task.wait(0.3)
-                createMoneyESP(money)
+                createMoneyESP(item)
             end)
         end
     end
 end
 
--- ปิด ESP Money
+-- ฟังก์ชันปิด Money ESP
 local function disableMoneyESP()
     MoneyESP_Enabled = false
-    for money, data in pairs(ESP_Money) do
+    for item, data in pairs(ESP_Money) do
         if data.highlight then data.highlight:Destroy() end
         if data.name then data.name:Remove() end
     end
@@ -1323,14 +1357,13 @@ RunService.Heartbeat:Connect(function()
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
     local rootPos = player.Character.HumanoidRootPart.Position
 
-    for money, data in pairs(ESP_Money) do
-        if money and money.Parent and data.handle and data.handle.Parent then
-            local worldPos = data.handle.Position + Vector3.new(0, 2, 0)
+    for item, data in pairs(ESP_Money) do
+        if item and item.Parent and data.mainPart and data.mainPart.Parent then
+            local worldPos = data.mainPart.Position + Vector3.new(0, 2, 0)
             local screenPos, onScreen = camera:WorldToViewportPoint(worldPos)
 
             if onScreen then
-                local screen2D = Vector2.new(screenPos.X, screenPos.Y)
-                data.name.Position = screen2D
+                data.name.Position = Vector2.new(screenPos.X, screenPos.Y)
                 data.name.Visible = true
             else
                 data.name.Visible = false
@@ -1338,28 +1371,33 @@ RunService.Heartbeat:Connect(function()
         else
             if data.highlight then data.highlight:Destroy() end
             if data.name then data.name:Remove() end
-            ESP_Money[money] = nil
+            ESP_Money[item] = nil
         end
     end
 end)
 
--- เมื่อมีของตกใหม่
-droppedFolder.ChildAdded:Connect(function(money)
-    task.wait(0.5)
-    createMoneyESP(money)
+-- เมื่อมี Money ใหม่เข้ามา
+droppedFolder.ChildAdded:Connect(function(item)
+    if not MoneyESP_Enabled then return end
+    if item.Name == "Money" then
+        task.wait(0.5)
+        createMoneyESP(item)
+    end
 end)
 
-EspTab:Toggle({
-    Title = "Money",
-    Value = MoneyESP_Enabled,
-    Callback = function(state)
-        if state then
-            enableMoneyESP()
-        else
-            disableMoneyESP()
+local function addMoneyESP_Toggle(EspTab)
+    EspTab:Toggle({
+        Title = "Money",
+        Value = MoneyESP_Enabled,
+        Callback = function(state)
+            if state then
+                enableMoneyESP()
+            else
+                disableMoneyESP()
+            end
         end
-    end
-})
+    })
+end
 
 local FireRateValue = Instance.new("NumberValue")
 FireRateValue.Name = "FireRateValue"
