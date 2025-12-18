@@ -658,166 +658,6 @@ end)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-
-local player = Players.LocalPlayer
-local camera = Workspace.CurrentCamera
-
--- ตัวแปรเปิด/ปิด ESP
-local ATM_ESP_Enabled = false
-local ESP_ATMs = {}  -- เก็บ Highlight + Lines สำหรับ ATM แต่ละตู้
-
--- โฟลเดอร์ ATM
-local atmsFolder = Workspace:FindFirstChild("ATMs")
-if not atmsFolder then
-    warn("ไม่พบโฟลเดอร์ ATMs")
-    return
-end
-
--- ฟังก์ชันสร้าง ESP สำหรับ ATM 1 ตู้
-local function createATMEsp(atm)
-    if not ATM_ESP_Enabled then return end
-    if ESP_ATMs[atm] then return end
-
-    local mainPart = atm:FindFirstChildOfClass("Part") or atm.PrimaryPart or atm:FindFirstChild("ATM")
-    if not mainPart or not mainPart:IsA("BasePart") then return end
-
-    local color = mainPart.BrickColor.Color
-
-    -- Highlight เรืองแสง
-    local highlight = Instance.new("Highlight")
-    highlight.FillColor = color
-    highlight.OutlineColor = color
-    highlight.FillTransparency = 0.4
-    highlight.OutlineTransparency = 0
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Parent = atm
-
-    -- Box 3D
-    local lines = {}
-    for i = 1, 12 do
-        local line = Drawing.new("Line")
-        line.Color = color
-        line.Thickness = 2
-        line.Transparency = 0.5
-        line.Visible = true
-        lines[i] = line
-    end
-
-    ESP_ATMs[atm] = {
-        highlight = highlight,
-        lines = lines,
-        mainPart = mainPart,
-        size = atm:GetExtentsSize() * 1.1
-    }
-
-    -- ลบเมื่อ ATM หาย
-    atm.AncestryChanged:Connect(function()
-        if not atm.Parent then
-            if ESP_ATMs[atm] then
-                highlight:Destroy()
-                for _, line in pairs(lines) do line:Remove() end
-                ESP_ATMs[atm] = nil
-            end
-        end
-    end)
-end
-
--- เปิด ESP
-local function enableATMESP()
-    ATM_ESP_Enabled = true
-    for _, atm in pairs(atmsFolder:GetChildren()) do
-        createATMEsp(atm)
-    end
-end
-
--- ปิด ESP
-local function disableATMESP()
-    ATM_ESP_Enabled = false
-    for atm, data in pairs(ESP_ATMs) do
-        if data.highlight then data.highlight:Destroy() end
-        for _, line in pairs(data.lines) do line:Remove() end
-    end
-    ESP_ATMs = {}
-end
-
--- อัปเดต Box 3D ทุกเฟรม
-RunService.RenderStepped:Connect(function()
-    if not ATM_ESP_Enabled then return end
-    for atm, data in pairs(ESP_ATMs) do
-        if atm and atm.Parent and data.mainPart and data.mainPart.Parent then
-            local cf = data.mainPart.CFrame
-            local size = data.size
-
-            local corners = {
-                cf * CFrame.new(-size.X/2, size.Y/2, -size.Z/2),
-                cf * CFrame.new(size.X/2, size.Y/2, -size.Z/2),
-                cf * CFrame.new(size.X/2, size.Y/2, size.Z/2),
-                cf * CFrame.new(-size.X/2, size.Y/2, size.Z/2),
-                cf * CFrame.new(-size.X/2, -size.Y/2, -size.Z/2),
-                cf * CFrame.new(size.X/2, -size.Y/2, -size.Z/2),
-                cf * CFrame.new(size.X/2, -size.Y/2, size.Z/2),
-                cf * CFrame.new(-size.X/2, -size.Y/2, size.Z/2)
-            }
-
-            local screenCorners = {}
-            local allOnScreen = true
-
-            for i, pos in ipairs(corners) do
-                local screenPos, onScreen = camera:WorldToViewportPoint(pos.Position)
-                screenCorners[i] = Vector2.new(screenPos.X, screenPos.Y)
-                if not onScreen then allOnScreen = false end
-            end
-
-            if allOnScreen then
-                local edges = {
-                    {1,2}, {2,3}, {3,4}, {4,1},
-                    {5,6}, {6,7}, {7,8}, {8,5},
-                    {1,5}, {2,6}, {3,7}, {4,8}
-                }
-                for i, edge in ipairs(edges) do
-                    local line = data.lines[i]
-                    line.From = screenCorners[edge[1]]
-                    line.To = screenCorners[edge[2]]
-                    line.Visible = true
-                end
-            else
-                for _, line in pairs(data.lines) do line.Visible = false end
-            end
-        else
-            if data.highlight then data.highlight:Destroy() end
-            for _, line in pairs(data.lines) do line:Remove() end
-            ESP_ATMs[atm] = nil
-        end
-    end
-end)
-
--- สแกน ATM ที่มีอยู่แล้ว
-for _, atm in pairs(atmsFolder:GetChildren()) do
-    createATMEsp(atm)
-end
-
--- เมื่อมี ATM ใหม่
-atmsFolder.ChildAdded:Connect(function(atm)
-    task.wait(0.5)
-    createATMEsp(atm)
-end)
-
--- WindUI Toggle
-EspTab:Toggle({
-    Title = "ATM",
-    Value = ATM_ESP_Enabled,
-    Callback = function(state)
-        if state then
-            enableATMESP()
-        else
-            disableATMESP()
-        end
-    end
-})
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContentProvider = game:GetService("ContentProvider")
 local LocalPlayer = Players.LocalPlayer
@@ -1375,6 +1215,164 @@ EspTab:Toggle({
     Value = MoneyESP_Enabled,
     Callback = function(state)
         if state then enableMoneyESP() else disableMoneyESP() end
+    end
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
+
+-- ตัวแปรเปิด/ปิด ESP
+local ATM_ESP_Enabled = false
+local ESP_ATMs = {}  -- เก็บ Highlight + Lines สำหรับ ATM แต่ละตู้
+
+-- โฟลเดอร์ ATM
+local atmsFolder = Workspace:FindFirstChild("ATMs")
+if not atmsFolder then
+    warn("ไม่พบโฟลเดอร์ ATMs")
+    return
+end
+
+-- ฟังก์ชันสร้าง ESP สำหรับ ATM 1 ตู้
+local function createATMEsp(atm)
+    if not ATM_ESP_Enabled then return end
+    if ESP_ATMs[atm] then return end
+
+    local mainPart = atm:FindFirstChildOfClass("Part") or atm.PrimaryPart or atm:FindFirstChild("ATM")
+    if not mainPart or not mainPart:IsA("BasePart") then return end
+
+    local color = mainPart.BrickColor.Color
+
+    -- Highlight เรืองแสง
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = color
+    highlight.OutlineColor = color
+    highlight.FillTransparency = 0.4
+    highlight.OutlineTransparency = 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = atm
+
+    -- Box 3D
+    local lines = {}
+    for i = 1, 12 do
+        local line = Drawing.new("Line")
+        line.Color = color
+        line.Thickness = 2
+        line.Transparency = 0.5
+        line.Visible = true
+        lines[i] = line
+    end
+
+    ESP_ATMs[atm] = {
+        highlight = highlight,
+        lines = lines,
+        mainPart = mainPart,
+        size = atm:GetExtentsSize() * 1.1
+    }
+
+    -- ลบเมื่อ ATM หาย
+    atm.AncestryChanged:Connect(function()
+        if not atm.Parent then
+            if ESP_ATMs[atm] then
+                highlight:Destroy()
+                for _, line in pairs(lines) do line:Remove() end
+                ESP_ATMs[atm] = nil
+            end
+        end
+    end)
+end
+
+-- เปิด ESP
+local function enableATMESP()
+    ATM_ESP_Enabled = true
+    for _, atm in pairs(atmsFolder:GetChildren()) do
+        createATMEsp(atm)
+    end
+end
+
+-- ปิด ESP
+local function disableATMESP()
+    ATM_ESP_Enabled = false
+    for atm, data in pairs(ESP_ATMs) do
+        if data.highlight then data.highlight:Destroy() end
+        for _, line in pairs(data.lines) do line:Remove() end
+    end
+    ESP_ATMs = {}
+end
+
+-- อัปเดต Box 3D ทุกเฟรม
+RunService.RenderStepped:Connect(function()
+    if not ATM_ESP_Enabled then return end
+    for atm, data in pairs(ESP_ATMs) do
+        if atm and atm.Parent and data.mainPart and data.mainPart.Parent then
+            local cf = data.mainPart.CFrame
+            local size = data.size
+
+            local corners = {
+                cf * CFrame.new(-size.X/2, size.Y/2, -size.Z/2),
+                cf * CFrame.new(size.X/2, size.Y/2, -size.Z/2),
+                cf * CFrame.new(size.X/2, size.Y/2, size.Z/2),
+                cf * CFrame.new(-size.X/2, size.Y/2, size.Z/2),
+                cf * CFrame.new(-size.X/2, -size.Y/2, -size.Z/2),
+                cf * CFrame.new(size.X/2, -size.Y/2, -size.Z/2),
+                cf * CFrame.new(size.X/2, -size.Y/2, size.Z/2),
+                cf * CFrame.new(-size.X/2, -size.Y/2, size.Z/2)
+            }
+
+            local screenCorners = {}
+            local allOnScreen = true
+
+            for i, pos in ipairs(corners) do
+                local screenPos, onScreen = camera:WorldToViewportPoint(pos.Position)
+                screenCorners[i] = Vector2.new(screenPos.X, screenPos.Y)
+                if not onScreen then allOnScreen = false end
+            end
+
+            if allOnScreen then
+                local edges = {
+                    {1,2}, {2,3}, {3,4}, {4,1},
+                    {5,6}, {6,7}, {7,8}, {8,5},
+                    {1,5}, {2,6}, {3,7}, {4,8}
+                }
+                for i, edge in ipairs(edges) do
+                    local line = data.lines[i]
+                    line.From = screenCorners[edge[1]]
+                    line.To = screenCorners[edge[2]]
+                    line.Visible = true
+                end
+            else
+                for _, line in pairs(data.lines) do line.Visible = false end
+            end
+        else
+            if data.highlight then data.highlight:Destroy() end
+            for _, line in pairs(data.lines) do line:Remove() end
+            ESP_ATMs[atm] = nil
+        end
+    end
+end)
+
+for _, atm in pairs(atmsFolder:GetChildren()) do
+    createATMEsp(atm)
+end
+
+-- เมื่อมี ATM ใหม่
+atmsFolder.ChildAdded:Connect(function(atm)
+    task.wait(0.5)
+    createATMEsp(atm)
+end)
+
+EspTab:Toggle({
+    Title = "ATM",
+    Value = ATM_ESP_Enabled,
+    Callback = function(state)
+        if state then
+            enableATMESP()
+        else
+            disableATMESP()
+        end
     end
 })
 
