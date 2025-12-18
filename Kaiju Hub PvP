@@ -1218,8 +1218,6 @@ EspTab:Toggle({
     end
 })
 
-    end
-do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
     local Workspace = game:GetService("Workspace")
