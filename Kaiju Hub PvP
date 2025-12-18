@@ -1225,9 +1225,9 @@ local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 
--- ตัวแปร ATM ESP
+-- ตัวแปรควบคุม
 local ATM_ESP_Enabled = false
-local ESP_ATMs = {}
+local ESP_ATMs = {}  -- เก็บ Highlight + Lines สำหรับ ATM แต่ละตู้
 
 -- โฟลเดอร์ ATM
 local atmsFolder = Workspace:FindFirstChild("ATMs")
@@ -1239,7 +1239,6 @@ end
 -- ฟังก์ชันสร้าง ESP สำหรับ ATM 1 ตู้
 local function createATMEsp(atm)
     if ESP_ATMs[atm] then return end
-    if not atm.Parent then return end
 
     local mainPart = atm:FindFirstChildOfClass("Part") or atm.PrimaryPart or atm:FindFirstChild("ATM")
     if not mainPart or not mainPart:IsA("BasePart") then return end
@@ -1253,8 +1252,8 @@ local function createATMEsp(atm)
     highlight.FillTransparency = 0.4
     highlight.OutlineTransparency = 0
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Enabled = ATM_ESP_Enabled
     highlight.Parent = atm
+    highlight.Enabled = ATM_ESP_Enabled
 
     -- Box 3D
     local lines = {}
@@ -1285,23 +1284,19 @@ local function createATMEsp(atm)
     end)
 end
 
--- เปิด ESP
+-- Enable / Disable
 local function enableATMESP()
     ATM_ESP_Enabled = true
-    for atm, data in pairs(ESP_ATMs) do
-        data.highlight.Enabled = true
+    for _, data in pairs(ESP_ATMs) do
+        if data.highlight then data.highlight.Enabled = true end
         for _, line in pairs(data.lines) do line.Visible = true end
-    end
-    for _, atm in pairs(atmsFolder:GetChildren()) do
-        createATMEsp(atm)
     end
 end
 
--- ปิด ESP
 local function disableATMESP()
     ATM_ESP_Enabled = false
-    for atm, data in pairs(ESP_ATMs) do
-        data.highlight.Enabled = false
+    for _, data in pairs(ESP_ATMs) do
+        if data.highlight then data.highlight.Enabled = false end
         for _, line in pairs(data.lines) do line.Visible = false end
     end
 end
@@ -1327,6 +1322,7 @@ RunService.RenderStepped:Connect(function()
 
             local screenCorners = {}
             local allOnScreen = true
+
             for i, pos in ipairs(corners) do
                 local screenPos, onScreen = camera:WorldToViewportPoint(pos.Position)
                 screenCorners[i] = Vector2.new(screenPos.X, screenPos.Y)
@@ -1334,7 +1330,11 @@ RunService.RenderStepped:Connect(function()
             end
 
             if allOnScreen then
-                local edges = {{1,2},{2,3},{3,4},{4,1},{5,6},{6,7},{7,8},{8,5},{1,5},{2,6},{3,7},{4,8}}
+                local edges = {
+                    {1,2}, {2,3}, {3,4}, {4,1},
+                    {5,6}, {6,7}, {7,8}, {8,5},
+                    {1,5}, {2,6}, {3,7}, {4,8}
+                }
                 for i, edge in ipairs(edges) do
                     local line = data.lines[i]
                     line.From = screenCorners[edge[1]]
@@ -1363,19 +1363,18 @@ atmsFolder.ChildAdded:Connect(function(atm)
     createATMEsp(atm)
 end)
 
-if EspTab then
-    EspTab:Toggle({
-        Title = "ATM",
-        Value = ATM_ESP_Enabled,
-        Callback = function(state)
-            if state then
-                enableATMESP()
-            else
-                disableATMESP()
-            end
+-- WindUI Toggle
+EspTab:Toggle({
+    Title = "ATM ESP",
+    Value = ATM_ESP_Enabled,
+    Callback = function(state)
+        if state then
+            enableATMESP()
+        else
+            disableATMESP()
         end
-    })
-end
+    end
+})
 
 local FireRateValue = Instance.new("NumberValue")
 FireRateValue.Name = "FireRateValue"
