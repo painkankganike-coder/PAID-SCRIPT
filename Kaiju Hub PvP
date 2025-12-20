@@ -1,3 +1,10 @@
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
     game:GetService("Players"),
@@ -6,43 +13,88 @@ local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
     game.Players.LocalPlayer,
     game:GetService("ReplicatedStorage")
 
+
 local Window = WindUI:CreateWindow({
-    Title = "❄️Kaiju Hub | Pvp Test🏔️",
-    Icon = "gitlab",
-    Author = "⛄My Kaiju | BlockSpin | i love You :D !",
-    Folder = "XINCOHubFolder",
+    Title = "☃️ Kaiju Hub | Pvp",
+    Icon = "layout-list", 
+    Author = "❄️ My Kaiju |  BlockSpin | I love You :D !",
+    Folder = "MyKaijuHub",
     Size = UDim2.fromOffset(400, 350),
-    Theme = "Dark",
     Transparent = true,
+    Theme = "Dark",
     Resizable = true,
+    SideBarWidth = 200,
+    HideSearchBar = false,
+    ScrollBarEnabled = true,
 })
 
 Window:Tag({
     Title = "PAID",
     Icon = "lock-keyhole",
-    Color = Color3.fromHex("#90C6FC"),
+    Color = Color3.fromHex("#818282"),
     Radius = 13,
 })
 
 Window:Tag({
-    Title = "v0.6.9",
-    Color = Color3.fromHex("#2889F7"),
+    Title = "v 0.7 Test",
+    Color = Color3.fromHex("#646666"),
     Radius = 13,
 })
 
-Window:EditOpenButton({
-    Title = "❄️Kaiju Hub | PAID☃️",
-    Icon = "circle-ellipsis",
-    CornerRadius = UDim.new(0,50),
-    StrokeThickness = 3,
-    Color = ColorSequence.new(
-        Color3.fromHex("292DFF"), 
-        Color3.fromHex("6E6BFF")
-    ),
-    OnlyMobile = false,
-    Enabled = true,
-    Draggable = true,
-})
+Window:EditOpenButton({ Enabled = false })
+
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleBtn = Instance.new("ImageButton")
+
+ScreenGui.Name = "WindUI_Toggle"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Position = UDim2.new(0, 20, 0.5, -25)
+ToggleBtn.BackgroundTransparency = 1
+ToggleBtn.Image = "rbxassetid://125837038699764" -- เนเธชเนเน€เธฅเธ ImageId เธ•เธฑเธงเน€เธญเธ
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+ToggleBtn.Parent = ScreenGui
+
+local opened = true
+
+local function toggle()
+    opened = not opened
+    if Window.UI then
+        Window.UI.Enabled = opened
+    else
+        Window:Toggle()
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    ToggleBtn:TweenSize(
+        UDim2.new(0, 56, 0, 56),
+        Enum.EasingDirection.Out,
+        Enum.EasingStyle.Quad,
+        0.12,
+        true,
+        function()
+            ToggleBtn:TweenSize(
+                UDim2.new(0, 50, 0, 50),
+                Enum.EasingDirection.Out,
+                Enum.EasingStyle.Quad,
+                0.12,
+                true
+            )
+        end
+    )
+    toggle()
+end)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.G then
+        toggle()
+    end
+end)
 
 local CombatTab = Window:Tab({Title = "COMBAT:", Icon = "crosshair"})
 CombatTab:Section({Title="GUN :"})
