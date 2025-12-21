@@ -1424,12 +1424,6 @@ ServerTab:Button({
     end
 })
 
-MiscTab:Code({
-    Title = "My  Server :",
-    Code = [[ tiktok :⚡ Kaiju Hub 🌐 
-discord : https://discord.gg/rdRYZmbkM4]]
-})
-
 local FireRateValue = Instance.new("NumberValue")
 FireRateValue.Name = "FireRateValue"
 FireRateValue.Value = 1500
