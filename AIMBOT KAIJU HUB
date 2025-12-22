@@ -410,7 +410,7 @@ getgenv().ESPHealthEnabled = false
 local function CreateHealthText()
     local text = Drawing.new("Text")
     text.Color = Color3.fromRGB(0,255,0) -- สีเขียว
-    text.Size = 7
+    text.Size = 10
     text.Center = true
     text.Outline = true
     text.OutlineColor = Color3.fromRGB(0,0,0)
@@ -472,7 +472,7 @@ getgenv().ESPNameEnabled = false
 local function CreateNameText()
     local text = Drawing.new("Text")
     text.Color = Color3.fromRGB(255,255,255) 
-    text.Size = 7
+    text.Size = 10
     text.Center = true
     text.Outline = true
     text.OutlineColor = Color3.fromRGB(0,0,0)
