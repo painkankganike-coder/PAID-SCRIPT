@@ -1,0 +1,579 @@
+local AimbotTab = Window:Tab({Title = "AIMBOT:", Icon = "crosshair"})
+AimbotTab:Section({Title="AIMBOT:"})
+local PlayerTab = Window:Tab({Title = "PLAYER:", Icon = "crosshair"})
+PlayerTab:Section({Title="PLAYER:"})
+local EspTab = Window:Tab({Title = "ESP:", Icon = "view"})
+EspTab:Section({Title="ESP:"})
+local settingTab = Window:Tab({Title = "SETTING:", Icon = "settings"})
+settingTab:Section({Title="setting:"})
+
+
+getgenv().HeadTrackFOVEnabled = false
+getgenv().WallCheckEnabled = false
+getgenv().TeamCheckEnabled = false
+local FOVRadius = 150
+local FOVSpeed = 0.5
+local MaxLockDistance = 1000
+
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Visible = false
+FOVCircle.Radius = FOVRadius
+FOVCircle.Filled = false
+FOVCircle.Thickness = 2
+FOVCircle.Color = Color3.fromRGB(255,0,0)
+
+local currentTarget = nil
+
+local function IsVisible(targetPart)
+    if getgenv().WallCheckEnabled then
+        return true -- ทะลุกำแพง
+    end
+
+    local origin = Camera.CFrame.Position
+    local direction = targetPart.Position - origin
+
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+    rayParams.FilterDescendantsInstances = { LocalPlayer.Character }
+    rayParams.IgnoreWater = true
+
+    local raycastResult = workspace:Raycast(origin, direction, rayParams)
+    return not raycastResult or raycastResult.Instance:IsDescendantOf(targetPart.Parent)
+end
+
+-- RenderStepped
+RunService.RenderStepped:Connect(function()
+    if not getgenv().HeadTrackFOVEnabled then
+        FOVCircle.Visible = false
+        currentTarget = nil
+        return
+    end
+
+    local mousePos = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    local closestHead = nil
+    local closestDist = math.huge
+
+    if currentTarget and currentTarget.Parent then
+        local humanoid = currentTarget.Parent:FindFirstChild("Humanoid")
+        local screenPos, onScreen = Camera:WorldToViewportPoint(currentTarget.Position)
+        local dist3D = (currentTarget.Position - Camera.CFrame.Position).Magnitude
+        if not humanoid or humanoid.Health <= 0 
+           or (not getgenv().WallCheckEnabled and not IsVisible(currentTarget))
+           or not onScreen
+           or dist3D > MaxLockDistance then
+            currentTarget = nil
+        else
+            local dist2D = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+            if dist2D > FOVRadius then
+                currentTarget = nil
+            end
+        end
+    else
+        currentTarget = nil
+    end
+
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("Humanoid") then
+            local humanoid = plr.Character.Humanoid
+            if humanoid.Health > 0 then
+                if getgenv().TeamCheckEnabled and LocalPlayer.Team and plr.Team and LocalPlayer.Team == plr.Team then
+                    continue
+                end
+
+                local head = plr.Character.Head
+                local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                local dist3D = (head.Position - Camera.CFrame.Position).Magnitude
+                if onScreen and IsVisible(head) and dist3D <= MaxLockDistance then
+                    local dist2D = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                    if dist2D < closestDist then
+                        closestDist = dist2D
+                        closestHead = head
+                    end
+                end
+            end
+        end
+    end
+
+    if closestHead and closestDist <= FOVRadius then
+        currentTarget = closestHead
+    end
+
+    -- ล็อคเป้า
+    if currentTarget and currentTarget.Parent then
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, currentTarget.Position)
+    end
+
+    -- FOV Circle
+    FOVCircle.Position = mousePos
+    FOVCircle.Visible = true
+    local time = tick() * FOVSpeed
+    local r = (math.sin(time) * 0.5 + 0.5)
+    local g = (math.sin(time + 2) * 0.5 + 0.5)
+    local b = (math.sin(time + 4) * 0.5 + 0.5)
+    FOVCircle.Color = Color3.new(r, g, b)
+end)
+
+AimbotTab:Toggle({
+    Title = "⭕Show Fov",
+    Callback = function(value)
+        getgenv().HeadTrackFOVEnabled = value
+    end
+})
+
+-- Slider ปรับ FOV
+AimbotTab:Slider({
+    Title = "↕️FOV :",
+    Step = 1,
+    Value = { Min = 50, Max = 300, Default = FOVRadius },
+    Callback = function(value)
+        FOVRadius = value
+        FOVCircle.Radius = FOVRadius
+    end
+})
+
+-- Slider ปรับ Max Lock Distance
+AimbotTab:Slider({
+    Title = "🔛Lock Distance",
+    Step = 10,
+    Value = { Min = 100, Max = 3000, Default = MaxLockDistance },
+    Callback = function(value)
+        MaxLockDistance = value
+    end
+})
+
+-- Toggle Wall Check
+AimbotTab:Toggle({
+    Title = "🧱Wall Check",
+    Default = false,
+    Callback = function(value)
+        getgenv().WallCheckEnabled = value
+    end
+})
+
+AimbotTab:Toggle({
+    Title = "👥Team Check",
+    Default = false,
+    Callback = function(value)
+        getgenv().TeamCheckEnabled = value
+    end
+})
+
+AimbotTab:Space()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ตัวแปรเก็บ Highlight ปัจจุบันและสถานะเปิดปิด
+local currentHighlight = nil
+getgenv().CharacterHighlightEnabled = false
+
+-- ฟังก์ชันสร้าง Highlight ทั้งร่างกายตัวละคร
+local function CreateCharacterHighlight(character)
+    if not character then return end
+
+    -- ลบ Highlight เก่า
+    if currentHighlight then
+        currentHighlight:Destroy()
+        currentHighlight = nil
+    end
+
+    -- สร้าง Highlight ใหม่
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0 -- ขาวทึบ
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.OutlineTransparency = 0
+    highlight.Adornee = character
+    highlight.Parent = workspace
+
+    currentHighlight = highlight
+end
+
+-- Loop อัพเดททุกเฟรม
+RunService.RenderStepped:Connect(function()
+    if not getgenv().CharacterHighlightEnabled then
+        if currentHighlight then
+            currentHighlight:Destroy()
+            currentHighlight = nil
+        end
+        return
+    end
+
+    local character = LocalPlayer.Character
+    if character then
+        if not currentHighlight or currentHighlight.Adornee ~= character then
+            CreateCharacterHighlight(character)
+        end
+    else
+        if currentHighlight then
+            currentHighlight:Destroy()
+            currentHighlight = nil
+        end
+    end
+end)
+
+settingTab:Toggle({
+    Title = "⚪Character Highlight",
+    Default = false,
+    Callback = function(value)
+        getgenv().CharacterHighlightEnabled = value
+    end
+})
+
+local WalkSpeedValue = 16
+local JumpPowerValue = 50
+
+local function ApplyCharacterSettings(character)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = WalkSpeedValue
+        humanoid.JumpPower = JumpPowerValue
+    end
+end
+
+LocalPlayer.CharacterAdded:Connect(function(character)
+    ApplyCharacterSettings(character)
+end)
+
+if LocalPlayer.Character then
+    ApplyCharacterSettings(LocalPlayer.Character)
+end
+
+-- Slider ปรับ WalkSpeed
+PlayerTab:Slider({
+    Title = "🐎WalkSpeed:",
+    Step = 1,
+    Value = { Min = 16, Max = 100, Default = WalkSpeedValue },
+    Callback = function(value)
+        WalkSpeedValue = value
+        if LocalPlayer.Character then
+            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = WalkSpeedValue
+            end
+        end
+    end
+})
+
+-- Slider ปรับ JumpPower
+PlayerTab:Slider({
+    Title = "🌪️JumpPower",
+    Step = 1,
+    Value = { Min = 20, Max = 300, Default = JumpPowerValue },
+    Callback = function(value)
+        JumpPowerValue = value
+        if LocalPlayer.Character then
+            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.JumpPower = JumpPowerValue
+            end
+        end
+    end
+})
+
+PlayerTab:Space()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- สถานะ Noclip
+getgenv().NoclipEnabled = false
+
+-- ฟังก์ชัน Noclip
+RunService.Stepped:Connect(function()
+    if not getgenv().NoclipEnabled then return end
+    local character = LocalPlayer.Character
+    if character then
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+PlayerTab:Toggle({
+    Title = "🕳️Noclip",
+    Default = false,
+    Callback = function(value)
+        getgenv().NoclipEnabled = value
+    end
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+-- ตัวแปรเก็บ ESP lines
+local espLines = {}
+getgenv().ESPEnabled = false
+
+local BOX_COLOR = Color3.fromRGB(255, 0, 0) -- สีแดง
+local LINE_THICKNESS = 1
+
+local function CreateLine()
+    local line = Drawing.new("Line")
+    line.Color = BOX_COLOR
+    line.Thickness = LINE_THICKNESS
+    return line
+end
+
+local function RemoveLines(plr)
+    if espLines[plr] then
+        for _, line in pairs(espLines[plr]) do
+            line:Remove()
+        end
+        espLines[plr] = nil
+    end
+end
+
+local function UpdateESP()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local character = plr.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if character and humanoid and humanoid.Health > 0 and root then
+                -- ส่วนต่าง ๆ ของตัวละคร
+                local parts = {}
+                if humanoid.RigType == Enum.HumanoidRigType.R6 then
+                    parts = {
+                        root,
+                        character:FindFirstChild("Left Arm"),
+                        character:FindFirstChild("Right Arm"),
+                        character:FindFirstChild("Left Leg"),
+                        character:FindFirstChild("Right Leg"),
+                        character:FindFirstChild("Head")
+                    }
+                else -- R15
+                    parts = {
+                        root,
+                        character:FindFirstChild("LeftUpperArm"),
+                        character:FindFirstChild("RightUpperArm"),
+                        character:FindFirstChild("LeftUpperLeg"),
+                        character:FindFirstChild("RightUpperLeg"),
+                        character:FindFirstChild("Head")
+                    }
+                end
+
+                local minX, minY = math.huge, math.huge
+                local maxX, maxY = -math.huge, -math.huge
+                local visible = false
+
+                for _, part in pairs(parts) do
+                    if part then
+                        local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+                        if onScreen then
+                            visible = true
+                            minX = math.min(minX, pos.X)
+                            minY = math.min(minY, pos.Y)
+                            maxX = math.max(maxX, pos.X)
+                            maxY = math.max(maxY, pos.Y)
+                        end
+                    end
+                end
+
+                if visible then
+
+                    if not espLines[plr] then
+                        espLines[plr] = {
+                            CreateLine(), -- Top
+                            CreateLine(), -- Bottom
+                            CreateLine(), -- Left
+                            CreateLine()  -- Right
+                        }
+                    end
+
+                    local lines = espLines[plr]
+                    lines[1].From = Vector2.new(minX, minY) -- Top
+                    lines[1].To = Vector2.new(maxX, minY)
+                    lines[2].From = Vector2.new(minX, maxY) -- Bottom
+                    lines[2].To = Vector2.new(maxX, maxY)
+                    lines[3].From = Vector2.new(minX, minY) -- Left
+                    lines[3].To = Vector2.new(minX, maxY)
+                    lines[4].From = Vector2.new(maxX, minY) -- Right
+                    lines[4].To = Vector2.new(maxX, maxY)
+
+                    for _, line in pairs(lines) do
+                        line.Visible = getgenv().ESPEnabled
+                    end
+                else
+                    RemoveLines(plr) 
+                end
+            else
+                RemoveLines(plr) 
+            end
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if getgenv().ESPEnabled then
+        UpdateESP()
+    else
+        for plr, _ in pairs(espLines) do
+            RemoveLines(plr)
+        end
+    end
+end)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = game:GetService("Players").LocalPlayer
+
+local healthTexts = {}
+getgenv().ESPHealthEnabled = false
+
+local function CreateHealthText()
+    local text = Drawing.new("Text")
+    text.Color = Color3.fromRGB(0,255,0) -- สีเขียว
+    text.Size = 7
+    text.Center = true
+    text.Outline = true
+    text.OutlineColor = Color3.fromRGB(0,0,0)
+    text.Font = 2
+    return text
+end
+
+-- ฟังก์ชันอัพเดท Health
+local function UpdateHealthESP()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local character = plr.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if character and humanoid and humanoid.Health > 0 and root then
+                local pos, onScreen = Camera:WorldToViewportPoint(root.Position + Vector3.new(0,-7,0)) -- เหนือหัว 3 studs
+                if onScreen then
+                    if not healthTexts[plr] then
+                        healthTexts[plr] = CreateHealthText()
+                    end
+                    local text = healthTexts[plr]
+                    local healthPercent = math.floor(humanoid.Health / humanoid.MaxHealth * 100)
+                    text.Text = "[ " .. healthPercent .. "% ]"
+                    text.Position = Vector2.new(pos.X, pos.Y)
+                    text.Visible = getgenv().ESPHealthEnabled
+                else
+                    if healthTexts[plr] then
+                        healthTexts[plr].Visible = false
+                    end
+                end
+            else
+                if healthTexts[plr] then
+                    healthTexts[plr]:Remove()
+                    healthTexts[plr] = nil
+                end
+            end
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if getgenv().ESPHealthEnabled then
+        UpdateHealthESP()
+    else
+        for plr, text in pairs(healthTexts) do
+            text.Visible = false
+        end
+    end
+end)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = game:GetService("Players").LocalPlayer
+
+local nameTexts = {}
+getgenv().ESPNameEnabled = false
+
+local function CreateNameText()
+    local text = Drawing.new("Text")
+    text.Color = Color3.fromRGB(255,255,255) 
+    text.Size = 7
+    text.Center = true
+    text.Outline = true
+    text.OutlineColor = Color3.fromRGB(0,0,0)
+    text.Font = 2
+    return text
+end
+
+local function UpdateNameESP()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local character = plr.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if character and root then
+                local pos, onScreen = Camera:WorldToViewportPoint(root.Position + Vector3.new(0,6,0)) -- เหนือหัว 3.5 studs
+                if onScreen then
+                    if not nameTexts[plr] then
+                        nameTexts[plr] = CreateNameText()
+                    end
+                    local text = nameTexts[plr]
+                    text.Text = plr.Name
+                    text.Position = Vector2.new(pos.X, pos.Y)
+                    text.Visible = getgenv().ESPNameEnabled
+                else
+                    if nameTexts[plr] then
+                        nameTexts[plr].Visible = false
+                    end
+                end
+            else
+                if nameTexts[plr] then
+                    nameTexts[plr]:Remove()
+                    nameTexts[plr] = nil
+                end
+            end
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if getgenv().ESPNameEnabled then
+        UpdateNameESP()
+    else
+        for plr, text in pairs(nameTexts) do
+            text.Visible = false
+        end
+    end
+end)
+
+EspTab:Toggle({
+    Title = "🪪Esp Name",
+    Default = false,
+    Callback = function(value)
+        getgenv().ESPNameEnabled = value
+    end
+})
+
+EspTab:Toggle({
+    Title = "🔋ESP Health",
+    Default = false,
+    Callback = function(value)
+        getgenv().ESPHealthEnabled = value
+    end
+})
+
+EspTab:Toggle({
+    Title = "📦ESP Box",
+    Default = false,
+    Callback = function(value)
+        getgenv().ESPEnabled = value
+    end
+})
+
+settingTab:Keybind({
+    Title = "⌨️Keybind",
+    Value = "G",
+    Callback = function(v)
+        Window:SetToggleKey(Enum.KeyCode[v])
+    end
+})
+
+settingTab:Code({
+    Title = "My tiktok  :",
+    Code = [[ tiktok : KAIJN X HUB]]
+})
