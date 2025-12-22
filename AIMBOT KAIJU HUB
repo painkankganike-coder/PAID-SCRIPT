@@ -1,3 +1,100 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
+    game:GetService("Players"),
+    game:GetService("RunService"),
+    workspace.CurrentCamera,
+    game.Players.LocalPlayer,
+    game:GetService("ReplicatedStorage")
+
+
+local Window = WindUI:CreateWindow({
+    Title = "☃️ Kaiju Hub | Pvp",
+    Icon = "layout-list", 
+    Author = "❄️ My Kaiju |  Aimbot | I love You :D !",
+    Folder = "MyKaijuHub",
+    Size = UDim2.fromOffset(400, 350),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    HideSearchBar = false,
+    ScrollBarEnabled = true,
+})
+
+Window:Tag({
+    Title = "Free",
+    Icon = "lock-keyhole-open",
+    Color = Color3.fromHex("#818282"),
+    Radius = 13,
+})
+
+Window:Tag({
+    Title = "v 1 b",
+    Color = Color3.fromHex("#646666"),
+    Radius = 13,
+})
+
+Window:EditOpenButton({ Enabled = false })
+
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleBtn = Instance.new("ImageButton")
+
+ScreenGui.Name = "WindUI_Toggle"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Position = UDim2.new(0, 20, 0.5, -25)
+ToggleBtn.BackgroundTransparency = 1
+ToggleBtn.Image = "rbxassetid://125837038699764" -- เนเธชเนเน€เธฅเธ ImageId เธ•เธฑเธงเน€เธญเธ
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+ToggleBtn.Parent = ScreenGui
+
+local opened = true
+
+local function toggle()
+    opened = not opened
+    if Window.UI then
+        Window.UI.Enabled = opened
+    else
+        Window:Toggle()
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    ToggleBtn:TweenSize(
+        UDim2.new(0, 56, 0, 56),
+        Enum.EasingDirection.Out,
+        Enum.EasingStyle.Quad,
+        0.12,
+        true,
+        function()
+            ToggleBtn:TweenSize(
+                UDim2.new(0, 50, 0, 50),
+                Enum.EasingDirection.Out,
+                Enum.EasingStyle.Quad,
+                0.12,
+                true
+            )
+        end
+    )
+    toggle()
+end)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.G then
+        toggle()
+    end
+end)
+
 local AimbotTab = Window:Tab({Title = "AIMBOT:", Icon = "crosshair"})
 AimbotTab:Section({Title="AIMBOT:"})
 local PlayerTab = Window:Tab({Title = "PLAYER:", Icon = "crosshair"})
@@ -305,124 +402,6 @@ PlayerTab:Toggle({
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
-
--- ตัวแปรเก็บ ESP lines
-local espLines = {}
-getgenv().ESPEnabled = false
-
-local BOX_COLOR = Color3.fromRGB(255, 0, 0) -- สีแดง
-local LINE_THICKNESS = 1
-
-local function CreateLine()
-    local line = Drawing.new("Line")
-    line.Color = BOX_COLOR
-    line.Thickness = LINE_THICKNESS
-    return line
-end
-
-local function RemoveLines(plr)
-    if espLines[plr] then
-        for _, line in pairs(espLines[plr]) do
-            line:Remove()
-        end
-        espLines[plr] = nil
-    end
-end
-
-local function UpdateESP()
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            local character = plr.Character
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            local root = character and character:FindFirstChild("HumanoidRootPart")
-            if character and humanoid and humanoid.Health > 0 and root then
-                -- ส่วนต่าง ๆ ของตัวละคร
-                local parts = {}
-                if humanoid.RigType == Enum.HumanoidRigType.R6 then
-                    parts = {
-                        root,
-                        character:FindFirstChild("Left Arm"),
-                        character:FindFirstChild("Right Arm"),
-                        character:FindFirstChild("Left Leg"),
-                        character:FindFirstChild("Right Leg"),
-                        character:FindFirstChild("Head")
-                    }
-                else -- R15
-                    parts = {
-                        root,
-                        character:FindFirstChild("LeftUpperArm"),
-                        character:FindFirstChild("RightUpperArm"),
-                        character:FindFirstChild("LeftUpperLeg"),
-                        character:FindFirstChild("RightUpperLeg"),
-                        character:FindFirstChild("Head")
-                    }
-                end
-
-                local minX, minY = math.huge, math.huge
-                local maxX, maxY = -math.huge, -math.huge
-                local visible = false
-
-                for _, part in pairs(parts) do
-                    if part then
-                        local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
-                        if onScreen then
-                            visible = true
-                            minX = math.min(minX, pos.X)
-                            minY = math.min(minY, pos.Y)
-                            maxX = math.max(maxX, pos.X)
-                            maxY = math.max(maxY, pos.Y)
-                        end
-                    end
-                end
-
-                if visible then
-
-                    if not espLines[plr] then
-                        espLines[plr] = {
-                            CreateLine(), -- Top
-                            CreateLine(), -- Bottom
-                            CreateLine(), -- Left
-                            CreateLine()  -- Right
-                        }
-                    end
-
-                    local lines = espLines[plr]
-                    lines[1].From = Vector2.new(minX, minY) -- Top
-                    lines[1].To = Vector2.new(maxX, minY)
-                    lines[2].From = Vector2.new(minX, maxY) -- Bottom
-                    lines[2].To = Vector2.new(maxX, maxY)
-                    lines[3].From = Vector2.new(minX, minY) -- Left
-                    lines[3].To = Vector2.new(minX, maxY)
-                    lines[4].From = Vector2.new(maxX, minY) -- Right
-                    lines[4].To = Vector2.new(maxX, maxY)
-
-                    for _, line in pairs(lines) do
-                        line.Visible = getgenv().ESPEnabled
-                    end
-                else
-                    RemoveLines(plr) 
-                end
-            else
-                RemoveLines(plr) 
-            end
-        end
-    end
-end
-
-RunService.RenderStepped:Connect(function()
-    if getgenv().ESPEnabled then
-        UpdateESP()
-    else
-        for plr, _ in pairs(espLines) do
-            RemoveLines(plr)
-        end
-    end
-end)
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
 local LocalPlayer = game:GetService("Players").LocalPlayer
 
 local healthTexts = {}
@@ -554,14 +533,6 @@ EspTab:Toggle({
     Default = false,
     Callback = function(value)
         getgenv().ESPHealthEnabled = value
-    end
-})
-
-EspTab:Toggle({
-    Title = "📦ESP Box",
-    Default = false,
-    Callback = function(value)
-        getgenv().ESPEnabled = value
     end
 })
 
