@@ -544,6 +544,42 @@ settingTab:Keybind({
     end
 })
 
+local function BoostFPS()
+    local Lighting = game:GetService("Lighting")
+    local Workspace = game:GetService("Workspace")
+
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 100000
+    Lighting.Brightness = 2
+    Lighting.OutdoorAmbient = Color3.fromRGB(128,128,128)
+    Lighting.ShadowSoftness = 0
+
+    for _, effect in pairs(Lighting:GetChildren()) do
+        if effect:IsA("BlurEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("BloomEffect") then
+            effect.Enabled = false
+        end
+    end
+
+    pcall(function()
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then
+                obj.Material = Enum.Material.Plastic
+                obj.Reflectance = 0
+            elseif obj:IsA("Texture") or obj:IsA("Decal") then
+                obj.Transparency = 1
+            end
+        end
+    end)
+
+    print("✅ Boost FPS Applied!")
+end
+
+settingTab:Button({
+    Title = "Boost FPS",
+    Callback = BoostFPS
+})
+
+
 settingTab:Code({
     Title = "My tiktok  :",
     Code = [[ tiktok : KAIJN X HUB]]
