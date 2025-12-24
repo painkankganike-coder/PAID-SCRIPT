@@ -5,12 +5,6 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
-    game:GetService("Players"),
-    game:GetService("RunService"),
-    workspace.CurrentCamera,
-    game.Players.LocalPlayer,
-    game:GetService("ReplicatedStorage")
 
 
 local Window = WindUI:CreateWindow({
@@ -104,13 +98,17 @@ EspTab:Section({Title="ESP:"})
 local settingTab = Window:Tab({Title = "SETTING:", Icon = "settings"})
 settingTab:Section({Title="setting:"})
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 
 getgenv().HeadTrackFOVEnabled = false
 getgenv().WallCheckEnabled = false
 getgenv().TeamCheckEnabled = false
 local FOVRadius = 150
-local FOVSpeed = 0.5
 local MaxLockDistance = 1000
+local currentTarget = nil
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = false
@@ -119,30 +117,33 @@ FOVCircle.Filled = false
 FOVCircle.Thickness = 2
 FOVCircle.Color = Color3.fromRGB(255,0,0)
 
-local currentTarget = nil
+local blockPart = Instance.new("Part")
+blockPart.Size = Vector3.new(0.2,0.2,0.2)
+blockPart.Anchored = true
+blockPart.CanCollide = false
+blockPart.Transparency = 0.6
+blockPart.Color = Color3.fromRGB(128,0,128)
+blockPart.Material = Enum.Material.Neon
+blockPart.CastShadow = false
+blockPart.Parent = workspace
 
 local function IsVisible(targetPart)
-    if getgenv().WallCheckEnabled then
-        return true -- ทะลุกำแพง
-    end
-
+    if getgenv().WallCheckEnabled then return true end
     local origin = Camera.CFrame.Position
     local direction = targetPart.Position - origin
-
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Blacklist
     rayParams.FilterDescendantsInstances = { LocalPlayer.Character }
     rayParams.IgnoreWater = true
-
     local raycastResult = workspace:Raycast(origin, direction, rayParams)
     return not raycastResult or raycastResult.Instance:IsDescendantOf(targetPart.Parent)
 end
 
--- RenderStepped
 RunService.RenderStepped:Connect(function()
     if not getgenv().HeadTrackFOVEnabled then
         FOVCircle.Visible = false
         currentTarget = nil
+        blockPart.Transparency = 0.7
         return
     end
 
@@ -156,8 +157,7 @@ RunService.RenderStepped:Connect(function()
         local dist3D = (currentTarget.Position - Camera.CFrame.Position).Magnitude
         if not humanoid or humanoid.Health <= 0 
            or (not getgenv().WallCheckEnabled and not IsVisible(currentTarget))
-           or not onScreen
-           or dist3D > MaxLockDistance then
+           or not onScreen or dist3D > MaxLockDistance then
             currentTarget = nil
         else
             local dist2D = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
@@ -176,7 +176,6 @@ RunService.RenderStepped:Connect(function()
                 if getgenv().TeamCheckEnabled and LocalPlayer.Team and plr.Team and LocalPlayer.Team == plr.Team then
                     continue
                 end
-
                 local head = plr.Character.Head
                 local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
                 local dist3D = (head.Position - Camera.CFrame.Position).Magnitude
@@ -195,19 +194,20 @@ RunService.RenderStepped:Connect(function()
         currentTarget = closestHead
     end
 
-    -- ล็อคเป้า
     if currentTarget and currentTarget.Parent then
         Camera.CFrame = CFrame.new(Camera.CFrame.Position, currentTarget.Position)
+        local headPos = currentTarget.Position
+        local myHead = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") and LocalPlayer.Character.Head.Position + Vector3.new(0,0.5,0)) or Camera.CFrame.Position
+        local dist = (headPos - myHead).Magnitude
+        blockPart.Size = Vector3.new(0.04,0.04,dist)
+        blockPart.CFrame = CFrame.new((headPos+myHead)/2, headPos)
+        blockPart.Transparency = 0.6
+    else
+        blockPart.Transparency = 0.7
     end
 
-    -- FOV Circle
     FOVCircle.Position = mousePos
     FOVCircle.Visible = true
-    local time = tick() * FOVSpeed
-    local r = (math.sin(time) * 0.5 + 0.5)
-    local g = (math.sin(time + 2) * 0.5 + 0.5)
-    local b = (math.sin(time + 4) * 0.5 + 0.5)
-    FOVCircle.Color = Color3.new(r, g, b)
 end)
 
 AimbotTab:Toggle({
@@ -217,7 +217,6 @@ AimbotTab:Toggle({
     end
 })
 
--- Slider ปรับ FOV
 AimbotTab:Slider({
     Title = "↕️FOV :",
     Step = 1,
@@ -228,7 +227,6 @@ AimbotTab:Slider({
     end
 })
 
--- Slider ปรับ Max Lock Distance
 AimbotTab:Slider({
     Title = "🔛Lock Distance",
     Step = 10,
@@ -238,7 +236,6 @@ AimbotTab:Slider({
     end
 })
 
--- Toggle Wall Check
 AimbotTab:Toggle({
     Title = "🧱Wall Check",
     Default = false,
