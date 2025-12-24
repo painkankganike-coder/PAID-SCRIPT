@@ -400,6 +400,81 @@ PlayerTab:Toggle({
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local flying = false
+local speed = 50
+
+local bv, bg
+local flyConn
+
+local function startFly()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local hum = char:WaitForChild("Humanoid")
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    hum.PlatformStand = true
+
+    bg = Instance.new("BodyGyro")
+    bg.P = 9e4
+    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bg.CFrame = Camera.CFrame
+    bg.Parent = hrp
+
+    bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bv.Velocity = Vector3.zero
+    bv.Parent = hrp
+
+    flyConn = RunService.RenderStepped:Connect(function()
+        local moveDir = hum.MoveDirection
+        local velocity = Vector3.zero
+
+        -- บินไปตามจอย / ปุ่มเดิน
+        if moveDir.Magnitude > 0 then
+            velocity += Camera.CFrame:VectorToWorldSpace(moveDir) * speed
+        end
+
+        -- ปุ่มกระโดด (Mobile Jump Button)
+        if hum.Jump then
+            velocity += Vector3.new(0, speed, 0)
+        end
+
+        bv.Velocity = velocity
+        bg.CFrame = Camera.CFrame
+    end)
+end
+
+local function stopFly()
+    if flyConn then flyConn:Disconnect() end
+    if bv then bv:Destroy() end
+    if bg then bg:Destroy() end
+
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.PlatformStand = false
+    end
+end
+
+PlayerTab:Toggle({
+    Title = "🕊 Fly",
+    Default = false,
+    Callback = function(value)
+        flying = value
+        if flying then
+            startFly()
+        else
+            stopFly()
+        end
+    end
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = game:GetService("Players").LocalPlayer
 
