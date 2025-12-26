@@ -2642,9 +2642,3 @@ MiscTab:Toggle({
         end
     end
 })
-
-MiscTab:Code({
-    Title = "My  Server :",
-    Code = [[ tiktok :⚡ Kaiju Hub 🌐 
-discord : https://discord.gg/rdRYZmbkM4]]
-})
