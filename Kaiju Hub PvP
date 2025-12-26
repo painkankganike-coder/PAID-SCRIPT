@@ -437,7 +437,7 @@ CombatTab:Button({
         print("✅ Player list refreshed")
     end
 })
--- BoolValues
+
 local function CreateBool(name)
     local val = Instance.new("BoolValue")
     val.Name = name
@@ -464,24 +464,6 @@ EspTab:Toggle({Title = "Tracer", Value = TracerEnabled.Value, Callback = functio
 -- ESP Storage
 local espBoxes, espNames, espDistances, healthBars, highlights, tracerLines = {}, {}, {}, {}, {}, {}
 local hue = 0
-
--- Silent Aim / Target Lock ตัวแปร
-local SilentAimEnabled = Instance.new("BoolValue")
-SilentAimEnabled.Name = "SilentAimEnabled"
-SilentAimEnabled.Value = false
-SilentAimEnabled.Parent = LocalPlayer
-
-local TargetPartValue = Instance.new("StringValue")
-TargetPartValue.Name = "TargetPart"
-TargetPartValue.Value = "Head"
-TargetPartValue.Parent = LocalPlayer
-
-local LockDistanceValue = Instance.new("NumberValue")
-LockDistanceValue.Name = "LockDistance"
-LockDistanceValue.Value = 1000
-LockDistanceValue.Parent = LocalPlayer
-
-local IgnorePlayers = {}
 local CurrentTarget
 
 -- WorldToViewport
@@ -517,94 +499,141 @@ end
 local function CreateNameDistance(plr)
     if plr == LocalPlayer or not plr.Character then return end
     local head = plr.Character:FindFirstChild("Head")
-    if head then
-        if NameEnabled.Value then
-            local bill = head:FindFirstChild("NameESP")
-            if not bill then
-                bill = Instance.new("BillboardGui")
-                bill.Name = "NameESP"
-                bill.Adornee = head
-                bill.Size = UDim2.new(0,120,0,25)
-                bill.AlwaysOnTop = true
-                bill.LightInfluence = 0
-                bill.StudsOffset = Vector3.new(0,9.5,0)
-                local label = Instance.new("TextLabel")
-                label.Parent = bill
-                label.Size = UDim2.new(1,0,1,0)
-                label.BackgroundTransparency = 1
-                label.Font = Enum.Font.Gotham
-                label.TextSize = 10
-                label.TextColor3 = (CurrentTarget == plr) and Color3.fromRGB(255,80,80) or Color3.new(1,1,1)
-                label.TextStrokeTransparency = 0
-                label.TextStrokeColor3 = Color3.new(0,0,0)
-                label.Text = plr.Name
-                label.RichText = true
-                bill.Parent = head
-                espNames[plr] = bill
-            else
-                bill.Enabled = true
-                local label = bill:FindFirstChildOfClass("TextLabel")
-                if label then
-                    label.TextColor3 = (CurrentTarget == plr) and Color3.fromRGB(255,80,80) or Color3.new(1,1,1)
-                end
-            end
-        elseif espNames[plr] then
-            espNames[plr].Enabled = false
+    if head and NameEnabled.Value then
+        local bill = head:FindFirstChild("NameESP")
+        if not bill then
+            bill = Instance.new("BillboardGui")
+            bill.Name = "NameESP"
+            bill.Adornee = head
+            bill.Size = UDim2.new(0,120,0,25)
+            bill.AlwaysOnTop = true
+            bill.LightInfluence = 0
+            bill.StudsOffset = Vector3.new(0,9.5,0)
+            local label = Instance.new("TextLabel")
+            label.Parent = bill
+            label.Size = UDim2.new(1,0,1,0)
+            label.BackgroundTransparency = 1
+            label.Font = Enum.Font.Gotham
+            label.TextSize = 10
+            label.TextStrokeTransparency = 0
+            label.TextStrokeColor3 = Color3.new(0,0,0)
+            label.Text = plr.Name
+            label.RichText = true
+            bill.Parent = head
+            espNames[plr] = bill
         end
     end
 
-    -- Distance (คงเดิม)
+    -- Distance ESP
     local root = plr.Character:FindFirstChild("HumanoidRootPart")
-    if root then
+    if root and DistanceEnabled.Value then
         local dist = math.floor((root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
-        if DistanceEnabled.Value then
-            local billData = espDistances[plr]
-            if not billData then
-                local bill = Instance.new("BillboardGui")
-                bill.Name = "DistanceESP"
-                bill.Adornee = root
-                bill.Size = UDim2.new(0,80,0,20)
-                bill.AlwaysOnTop = true
-                bill.LightInfluence = 0
-                bill.StudsOffset = Vector3.new(0,-9.5,0)
-                local label = Instance.new("TextLabel")
-                label.Parent = bill
-                label.Size = UDim2.new(1,0,1,0)
-                label.BackgroundTransparency = 1
-                label.Font = Enum.Font.Gotham
-                label.TextSize = 10
-                label.TextColor3 = Color3.new(1,1,1)
-                label.TextStrokeTransparency = 0
-                label.TextStrokeColor3 = Color3.new(0,0,0)
-                label.Text = "Distance: "..dist.."m"
-                label.RichText = true
-                bill.Parent = root
-                espDistances[plr] = {bill=bill,label=label}
-            else
-                billData.label.Text = "Distance: "..dist.."m"
-                billData.bill.Enabled = true
-            end
-        elseif espDistances[plr] then
-            espDistances[plr].bill.Enabled = false
+        local billData = espDistances[plr]
+        if not billData then
+            local bill = Instance.new("BillboardGui")
+            bill.Name = "DistanceESP"
+            bill.Adornee = root
+            bill.Size = UDim2.new(0,80,0,20)
+            bill.AlwaysOnTop = true
+            bill.LightInfluence = 0
+            bill.StudsOffset = Vector3.new(0,-9.5,0)
+            local label = Instance.new("TextLabel")
+            label.Parent = bill
+            label.Size = UDim2.new(1,0,1,0)
+            label.BackgroundTransparency = 1
+            label.Font = Enum.Font.Gotham
+            label.TextSize = 10
+            label.TextColor3 = Color3.new(1,1,1)
+            label.TextStrokeTransparency = 0
+            label.TextStrokeColor3 = Color3.new(0,0,0)
+            label.Text = "Distance: "..dist.."m"
+            label.RichText = true
+            bill.Parent = root
+            espDistances[plr] = {bill=bill,label=label}
+        else
+            billData.label.Text = "Distance: "..dist.."m"
+            billData.bill.Enabled = true
         end
+    end
+end
+
+-- Health ESP
+local function CreateHealth(plr)
+    if plr == LocalPlayer or not plr.Character then return end
+    local humanoid = plr.Character:FindFirstChild("Humanoid")
+    local root = plr.Character:FindFirstChild("HumanoidRootPart")
+    if humanoid and root and HealthEnabled.Value then
+        if healthBars[plr] then return end
+        local bar = Instance.new("BillboardGui")
+        bar.Name = "HealthESP"
+        bar.Adornee = root
+        bar.Size = UDim2.new(0,30,0,3)
+        bar.StudsOffset = Vector3.new(0,-5,0)
+        bar.AlwaysOnTop = true
+        bar.LightInfluence = 0
+        local bg = Instance.new("Frame")
+        bg.Size = UDim2.new(1,0,1,0)
+        bg.BackgroundColor3 = Color3.fromRGB(0,0,0)
+        bg.BorderSizePixel = 0
+        bg.Parent = bar
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1,0,1,0)
+        frame.BackgroundColor3 = Color3.fromRGB(144,238,144)
+        frame.BorderSizePixel = 0
+        frame.Parent = bg
+        bar.Parent = plr.Character
+        healthBars[plr] = {bar=bar,bg=bg,frame=frame,humanoid=humanoid}
+    end
+end
+
+-- Highlight ESP
+local function CreateHighlight(plr)
+    if plr == LocalPlayer or not plr.Character then return end
+    if HighlightEnabled.Value and not plr.Character:FindFirstChild("ESP_HIGHLIGHT") then
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ESP_HIGHLIGHT"
+        highlight.FillColor = Color3.fromRGB(180,40,255)
+        highlight.OutlineColor = Color3.fromRGB(255,255,255)
+        highlight.FillTransparency = 0.2
+        highlight.OutlineTransparency = 0
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.Parent = plr.Character
+        highlights[plr] = highlight
+    elseif not HighlightEnabled.Value and highlights[plr] then
+        highlights[plr]:Destroy()
+        highlights[plr] = nil
+    end
+end
+
+-- Tracer ESP
+local function CreateTracer(plr)
+    if plr == LocalPlayer or not plr.Character then return end
+    if plr.Character:FindFirstChild("Head") and not tracerLines[plr] then
+        local line = Drawing.new("Line")
+        line.Thickness = 1
+        line.Transparency = 1
+        line.Color = Color3.fromHSV(hue,1,1)
+        line.Visible = TracerEnabled.Value
+        tracerLines[plr] = line
     end
 end
 
 -- Main update loop
 RunService.RenderStepped:Connect(function()
     hue = (hue + 0.001)%1
-    -- หาเป้าหมายใกล้ที่สุด (Silent Aim)
-    if SilentAimEnabled.Value then
+    CurrentTarget = nil
+
+    -- หา CurrentTarget สำหรับ Tracer
+    if TracerEnabled.Value then
         local closest
         local shortest = math.huge
         local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
         for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(TargetPartValue.Value) then
-                local headPart = player.Character:FindFirstChild(TargetPartValue.Value)
-                local screenPos, onScreen = Camera:WorldToViewportPoint(headPart.Position)
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(player.Character.Head.Position)
                 if onScreen then
                     local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-                    if dist < shortest and dist <= LockDistanceValue.Value then
+                    if dist < shortest then
                         shortest = dist
                         closest = player
                     end
@@ -612,11 +641,8 @@ RunService.RenderStepped:Connect(function()
             end
         end
         CurrentTarget = closest
-    else
-        CurrentTarget = nil
     end
 
-    -- อัปเดต ESP
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
             -- Box
@@ -657,6 +683,42 @@ RunService.RenderStepped:Connect(function()
 
             -- Name & Distance
             CreateNameDistance(plr)
+
+            -- Health
+            CreateHealth(plr)
+            if healthBars[plr] then
+                local h = healthBars[plr]
+                local humanoid = h.humanoid
+                local percent = math.clamp(humanoid.Health/humanoid.MaxHealth,0,1)
+                h.frame.Size = UDim2.new(percent,0,1,0)
+                if percent>0.5 then h.frame.BackgroundColor3 = Color3.fromRGB(144,238,144)
+                elseif percent>0.25 then h.frame.BackgroundColor3 = Color3.fromRGB(255,255,102)
+                else h.frame.BackgroundColor3 = Color3.fromRGB(255,102,102) end
+                h.bar.Enabled = HealthEnabled.Value
+            end
+
+            -- Highlight
+            CreateHighlight(plr)
+
+            -- Tracer
+            CreateTracer(plr)
+            if tracerLines[plr] and plr.Character:FindFirstChild("Head") then
+                local headPos = plr.Character.Head.Position
+                local screenPos, onScreen = Camera:WorldToViewportPoint(headPos)
+                local line = tracerLines[plr]
+                line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                line.To = Vector2.new(screenPos.X, screenPos.Y)
+                line.Color = (CurrentTarget == plr) and Color3.fromRGB(255,80,80) or Color3.fromHSV(hue,1,1)
+                line.Visible = TracerEnabled.Value and onScreen
+            end
+
+            -- เปลี่ยนสี Name ESP ถ้าเป็น CurrentTarget
+            if espNames[plr] then
+                local label = espNames[plr]:FindFirstChildOfClass("TextLabel")
+                if label then
+                    label.TextColor3 = (CurrentTarget == plr) and Color3.fromRGB(255,80,80) or Color3.new(1,1,1)
+                end
+            end
         else
             -- ลบ ESP ของ LocalPlayer
             RemoveBox(plr)
