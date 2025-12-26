@@ -310,10 +310,11 @@ oldFire = hookfunction(send.FireServer, function(self, ...)
 end)
 
 RunService.RenderStepped:Connect(function()
+
     fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     fovCircle.Radius = FOVRadiusValue.Value
     hue = (hue + 0.0005) % 1
-    fovCircle.Color = Color3.fromHSV(hue, 1, 1)
+    fovCircle.Color = Color3.fromHSV(hue, 1, 1) -- FOV เป็นสีรุ้ง
 
     if not SilentAimEnabledValue.Value then
         tracerLine.Visible = false
@@ -330,7 +331,7 @@ RunService.RenderStepped:Connect(function()
             local centerScreen = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
             tracerLine.From = centerScreen
             tracerLine.To = Vector2.new(screenPos.X, screenPos.Y)
-            tracerLine.Color = Color3.fromHSV(hue, 1, 1)
+            tracerLine.Color = Color3.fromRGB(255,80,80) -- Tracer เป็นสีแดงอ่อนคงที่
             tracerLine.Visible = true
         else
             tracerLine.Visible = false
