@@ -1432,6 +1432,370 @@ ServerTab:Button({
     end
 })
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local InfoGui = Instance.new("ScreenGui")
+InfoGui.Name = "InfoDisplay"
+InfoGui.ResetOnSpawn = false
+InfoGui.DisplayOrder = 999
+InfoGui.Enabled = false
+InfoGui.Parent = PlayerGui
+
+local pingLabel = Instance.new("TextLabel")
+pingLabel.Size = UDim2.new(0, 160, 0, 25)
+pingLabel.Position = UDim2.new(0, 10, 0, 10)
+pingLabel.BackgroundTransparency = 1
+pingLabel.Font = Enum.Font.SourceSansBold
+pingLabel.TextSize = 18
+pingLabel.TextXAlignment = Enum.TextXAlignment.Left
+pingLabel.Text = "Ping : 0 ms"
+pingLabel.TextColor3 = Color3.fromRGB(255,0,0)
+pingLabel.Visible = false
+pingLabel.Parent = InfoGui
+
+local pingStroke = Instance.new("UIStroke", pingLabel)
+pingStroke.Color = Color3.fromRGB(0,0,0)
+pingStroke.Thickness = 2
+
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Size = UDim2.new(0, 160, 0, 25)
+fpsLabel.Position = UDim2.new(0, 10, 0, 35)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.Font = Enum.Font.SourceSansBold
+fpsLabel.TextSize = 18
+fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+fpsLabel.Text = "FPS : 0"
+fpsLabel.TextColor3 = Color3.fromRGB(0,255,0)
+fpsLabel.Visible = false
+fpsLabel.Parent = InfoGui
+
+local fpsStroke = Instance.new("UIStroke", fpsLabel)
+fpsStroke.Color = Color3.fromRGB(0,0,0)
+fpsStroke.Thickness = 2
+
+local ShowPing = false
+local ShowFPS = false
+local lastTime = tick()
+local frames = 0
+local fps = 0
+
+RunService.RenderStepped:Connect(function()
+    if ShowPing then
+        local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
+        pingLabel.Text = "Ping : "..ping.." ms"
+    end
+
+    if ShowFPS then
+        frames += 1
+        local now = tick()
+        if now - lastTime >= 1 then
+            fps = frames
+            frames = 0
+            lastTime = now
+        end
+        fpsLabel.Text = "FPS : "..fps
+    end
+end)
+
+MiscTab:Toggle({
+    Title = "Show Ping",
+    Value = false,
+    Callback = function(state)
+        ShowPing = state
+        pingLabel.Visible = state
+        InfoGui.Enabled = ShowPing or ShowFPS
+    end
+})
+
+MiscTab:Toggle({
+    Title = "Show FPS",
+    Value = false,
+    Callback = function(state)
+        ShowFPS = state
+        fpsLabel.Visible = state
+        InfoGui.Enabled = ShowPing or ShowFPS
+    end
+})
+
+local CounterTable
+pcall(function()
+    for _, Obj in ipairs(getgc(true)) do
+        if typeof(Obj) == "table" and rawget(Obj, "event") and rawget(Obj, "func") then
+            CounterTable = Obj
+            break
+        end
+    end
+end)
+
+local function NetGet(...)
+    if not CounterTable or not CounterTable.func then
+        warn("❌ CounterTable ไม่พบ!")
+        return
+    end
+    local args = {...}
+    CounterTable.func = (CounterTable.func or 0) + 1
+    local success, result = pcall(function()
+        local GetRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get")
+        return GetRemote:InvokeServer(CounterTable.func, unpack(args))
+    end)
+    if not success then warn("[NetGet Error]", result) end
+    return result
+end
+
+local function ClaimAllQuests()
+    local questFrame
+    local success = pcall(function()
+        questFrame = player:WaitForChild("PlayerGui"):WaitForChild("Quests"):WaitForChild("QuestsHolder"):WaitForChild("QuestsScrollingFrame")
+    end)
+    if not success or not questFrame then
+        warn("❌ Quest GUI ไม่พบ!")
+        return 0
+    end
+    local claimed = 0
+    for _, child in ipairs(questFrame:GetChildren()) do
+        if (child:IsA("Frame") or child:IsA("TextButton") or child:IsA("ImageButton")) and child.Name ~= "" then
+            pcall(function()
+                NetGet("claim_quest", child.Name)
+            end)
+            claimed = claimed + 1
+            task.wait(0.2)
+        end
+    end
+    return claimed
+end
+
+MiscTab:Button({
+    Title = "Claim All Quests",
+    Callback = function()
+        local claimed = ClaimAllQuests()
+        print("✅ Claimed "..claimed.." Quests!")
+    end
+})
+
+local function KaijuHub_BoostFPS()
+    local lighting = game:GetService("Lighting")
+    local workspaceRef = game:GetService("Workspace")
+
+    lighting.GlobalShadows = false  
+    lighting.FogEnd = 100000  
+    lighting.Brightness = 2  
+    lighting.OutdoorAmbient = Color3.fromRGB(128,128,128)  
+    lighting.ShadowSoftness = 0  
+
+    for _, effect in pairs(lighting:GetChildren()) do  
+        if effect:IsA("BlurEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("BloomEffect") then  
+            effect.Enabled = false  
+        end  
+    end  
+
+    pcall(function()  
+        for _, obj in pairs(workspaceRef:GetDescendants()) do  
+            if obj:IsA("BasePart") then  
+                obj.Material = Enum.Material.Plastic  
+                obj.Reflectance = 0  
+            elseif obj:IsA("Texture") or obj:IsA("Decal") then  
+                obj.Transparency = 1  
+            end
+        end
+    end)  
+
+    print("✅ KaijuHub Boost FPS Applied!")
+end
+
+MiscTab:Button({
+    Title = "Boost FPS",
+    Callback = function()
+        KaijuHub_BoostFPS()
+    end
+})
+
+MiscTab:Button({
+    Title = "Remove Doors",
+    Callback = function()
+        pcall(function()
+            local doorSys = workspace:FindFirstChild("DoorSystem")
+            if doorSys then
+                doorSys:Destroy()
+            end
+
+            local allObjs = workspace:GetDescendants()
+            for i = 1, #allObjs do
+                local obj = allObjs[i]
+                local objName = obj.Name:lower()
+                local parentName = obj.Parent and obj.Parent.Name:lower() or ""
+
+                if objName:find("door") or parentName:find("door") then
+                    if obj:IsA("Model") then
+                        obj:Destroy()
+                    elseif obj:IsA("BasePart") then
+                        obj.CanCollide = false
+                        obj.Transparency = 1
+                        local clickDet = obj:FindFirstChildWhichIsA("ClickDetector")
+                        if clickDet then
+                            clickDet.MaxActivationDistance = 0
+                        end
+                    end
+                end
+            end
+        end)
+    end
+})
+
+MiscTab:Button({
+    Title = "Remove Roads",
+    Callback = function()
+        local mapFolder = workspace:FindFirstChild("Map")
+        if mapFolder and mapFolder:FindFirstChild("RoadNetwork") then
+            mapFolder.RoadNetwork:Destroy()
+            print("✅ RoadNetwork removed")
+        else
+            warn("❌ ไม่พบ Map.RoadNetwork")
+        end
+    end
+})
+
+local UserInputService = game:GetService("UserInputService")
+local FreeCamEnabled = false
+local FreeCamSpeed = 1
+local CameraCFrame = Camera.CFrame
+local MoveDirection = Vector3.new(0,0,0)
+
+MiscTab:Toggle({
+    Title = "Free Camera",
+    Value = false,
+    Callback = function(state)
+        FreeCamEnabled = state
+        if state then
+            Camera.CameraType = Enum.CameraType.Scriptable
+            CameraCFrame = Camera.CFrame
+        else
+            Camera.CameraType = Enum.CameraType.Custom
+        end
+    end
+})
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == Enum.KeyCode.W then MoveDirection = MoveDirection + Vector3.new(0,0,-1)
+        elseif input.KeyCode == Enum.KeyCode.S then MoveDirection = MoveDirection + Vector3.new(0,0,1)
+        elseif input.KeyCode == Enum.KeyCode.A then MoveDirection = MoveDirection + Vector3.new(-1,0,0)
+        elseif input.KeyCode == Enum.KeyCode.D then MoveDirection = MoveDirection + Vector3.new(1,0,0)
+        elseif input.KeyCode == Enum.KeyCode.Space then MoveDirection = MoveDirection + Vector3.new(0,1,0)
+        elseif input.KeyCode == Enum.KeyCode.LeftControl then MoveDirection = MoveDirection + Vector3.new(0,-1,0)
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == Enum.KeyCode.W then MoveDirection = MoveDirection - Vector3.new(0,0,-1)
+        elseif input.KeyCode == Enum.KeyCode.S then MoveDirection = MoveDirection - Vector3.new(0,0,1)
+        elseif input.KeyCode == Enum.KeyCode.A then MoveDirection = MoveDirection - Vector3.new(-1,0,0)
+        elseif input.KeyCode == Enum.KeyCode.D then MoveDirection = MoveDirection - Vector3.new(1,0,0)
+        elseif input.KeyCode == Enum.KeyCode.Space then MoveDirection = MoveDirection - Vector3.new(0,1,0)
+        elseif input.KeyCode == Enum.KeyCode.LeftControl then MoveDirection = MoveDirection - Vector3.new(0,-1,0)
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function(deltaTime)
+    if FreeCamEnabled then
+        local move = (Camera.CFrame:VectorToWorldSpace(MoveDirection)) * FreeCamSpeed
+        CameraCFrame = CameraCFrame + move * deltaTime * 50
+        Camera.CFrame = CameraCFrame
+    end
+end)
+
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+local Crosshair = false
+local lines = {}
+local rotation = 0
+
+local function createCrosshair()
+    local gap, length, thickness = 15, 40, 6
+    lines = {
+        Top = Drawing.new("Line"),
+        Bottom = Drawing.new("Line"),
+        Left = Drawing.new("Line"),
+        Right = Drawing.new("Line"),
+    }
+    for _, line in pairs(lines) do
+        line.Thickness = thickness
+        line.Color = Color3.fromHSV(0, 0.5, 1)
+        line.Visible = true
+    end
+end
+
+local function removeCrosshair()
+    for _, line in pairs(lines) do
+        line:Remove()
+    end
+    lines = {}
+end
+
+RunService.RenderStepped:Connect(function(delta)
+    if not Crosshair or next(lines) == nil then return end
+
+    local centerX = Camera.ViewportSize.X / 2
+    local centerY = Camera.ViewportSize.Y / 2
+
+    rotation = (rotation + 90 * delta) % 360 -- หมุน 90 องศาต่อนาที
+    local rad = math.rad(rotation)
+
+    local function rotatePoint(x, y)
+        local cosR = math.cos(rad)
+        local sinR = math.sin(rad)
+        return x * cosR - y * sinR, x * sinR + y * cosR
+    end
+
+    local hue = tick() % 1
+    local rainbowColor = Color3.fromHSV(hue, 0.5, 1)
+
+    local gap, length = 15, 40
+    local offsets = {
+        Top = {0, -gap - length, 0, -gap},
+        Bottom = {0, gap, 0, gap + length},
+        Left = {-gap - length, 0, -gap, 0},
+        Right = {gap, 0, gap + length, 0},
+    }
+
+    for name, line in pairs(lines) do
+        local ox1, oy1, ox2, oy2 = table.unpack(offsets[name])
+        local rx1, ry1 = rotatePoint(ox1, oy1)
+        local rx2, ry2 = rotatePoint(ox2, oy2)
+        line.From = Vector2.new(centerX + rx1, centerY + ry1)
+        line.To = Vector2.new(centerX + rx2, centerY + ry2)
+        line.Color = rainbowColor
+    end
+end)
+
+MiscTab:Toggle({
+    Title = "Show Crosshair",
+    Value = false,
+    Callback = function(state)
+        Crosshair = state
+        if Crosshair then
+            createCrosshair()
+        else
+            removeCrosshair()
+        end
+    end
+})
+
+MiscTab:Code({
+    Title = "My  Server :",
+    Code = [[ tiktok :⚡ Kaiju Hub 🌐 
+discord : https://discord.gg/rdRYZmbkM4]]
+})
+
 local FireRateValue = Instance.new("NumberValue")
 FireRateValue.Name = "FireRateValue"
 FireRateValue.Value = 1500
