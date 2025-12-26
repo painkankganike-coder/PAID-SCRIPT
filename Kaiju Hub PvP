@@ -12,7 +12,6 @@ local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
     game.Players.LocalPlayer,
     game:GetService("ReplicatedStorage")
 
-
 local Window = WindUI:CreateWindow({
     Title = "☃️ Kaiju Hub | Pvp",
     Icon = "layout-list", 
