@@ -441,7 +441,7 @@ CombatTab:Button({
 local function CreateBool(name)
     local val = Instance.new("BoolValue")
     val.Name = name
-    val.Value = false -- เริ่มปิด
+    val.Value = false
     val.Parent = LocalPlayer
     return val
 end
@@ -453,18 +453,17 @@ local HealthEnabled = CreateBool("ESPHealthEnabled")
 local HighlightEnabled = CreateBool("ESPHighlightEnabled")
 local TracerEnabled = CreateBool("ESPTracerEnabled")
 
--- Toggle UI
-EspTab:Toggle({Title="Box", Value=BoxEnabled.Value, Callback=function(state) BoxEnabled.Value=state end})
-EspTab:Toggle({Title="Name", Value=NameEnabled.Value, Callback=function(state) NameEnabled.Value=state end})
-EspTab:Toggle({Title="Distance", Value=DistanceEnabled.Value, Callback=function(state) DistanceEnabled.Value=state end})
-EspTab:Toggle({Title="Health", Value=HealthEnabled.Value, Callback=function(state) HealthEnabled.Value=state end})
-EspTab:Toggle({Title="Highlight", Value=HighlightEnabled.Value, Callback=function(state) HighlightEnabled.Value=state end})
-EspTab:Toggle({Title="Tracer", Value=TracerEnabled.Value, Callback=function(state) TracerEnabled.Value=state end})
+-- Toggle ทุกฟังก์ชัน
+EspTab:Toggle({Title = "Box", Value = BoxEnabled.Value, Callback = function(state) BoxEnabled.Value = state end})
+EspTab:Toggle({Title = "Name", Value = NameEnabled.Value, Callback = function(state) NameEnabled.Value = state end})
+EspTab:Toggle({Title = "Distance", Value = DistanceEnabled.Value, Callback = function(state) DistanceEnabled.Value = state end})
+EspTab:Toggle({Title = "Health", Value = HealthEnabled.Value, Callback = function(state) HealthEnabled.Value = state end})
+EspTab:Toggle({Title = "Highlight", Value = HighlightEnabled.Value, Callback = function(state) HighlightEnabled.Value = state end})
+EspTab:Toggle({Title = "Tracer", Value = TracerEnabled.Value, Callback = function(state) TracerEnabled.Value = state end})
 
 -- ESP Storage
 local espBoxes, espNames, espDistances, healthBars, highlights, tracerLines = {}, {}, {}, {}, {}, {}
 local hue = 0
-local CurrentTarget -- ต้องถูกอัปเดตจากโค้ดล็อคของคุณ
 
 -- WorldToViewport
 local function worldToViewport(pos)
@@ -472,7 +471,7 @@ local function worldToViewport(pos)
     return Vector2.new(screen.X, screen.Y), onScreen
 end
 
--- Box ESP
+-- สร้าง Box ESP
 local function CreateBox(plr)
     if plr == LocalPlayer then return end
     if espBoxes[plr] then return end
@@ -480,7 +479,7 @@ local function CreateBox(plr)
     for i=1,12 do
         local line = Drawing.new("Line")
         line.Visible = false
-        line.Color = Color3.new(1,1,1)
+        line.Color = Color3.fromRGB(255,255,255)
         line.Thickness = 2
         line.Transparency = 1
         lines[i] = line
@@ -498,36 +497,46 @@ end
 -- Name & Distance ESP
 local function CreateNameDistance(plr)
     if plr == LocalPlayer or not plr.Character then return end
+
+    -- Name
     local head = plr.Character:FindFirstChild("Head")
-    if head and NameEnabled.Value then
-        local bill = head:FindFirstChild("NameESP")
-        if not bill then
-            bill = Instance.new("BillboardGui")
-            bill.Name = "NameESP"
-            bill.Adornee = head
-            bill.Size = UDim2.new(0,120,0,25)
-            bill.AlwaysOnTop = true
-            bill.LightInfluence = 0
-            bill.StudsOffset = Vector3.new(0,3,0)
-            local label = Instance.new("TextLabel")
-            label.Parent = bill
-            label.Size = UDim2.new(1,0,1,0)
-            label.BackgroundTransparency = 1
-            label.Font = Enum.Font.Gotham
-            label.TextSize = 14
-            label.TextStrokeTransparency = 0
-            label.TextStrokeColor3 = Color3.new(0,0,0)
-            label.Text = plr.Name
-            label.RichText = true
-            bill.Parent = head
-            espNames[plr] = bill
+    if head then
+        if NameEnabled.Value then
+            local bill = head:FindFirstChild("NameESP")
+            if not bill then
+                bill = Instance.new("BillboardGui")
+                bill.Name = "NameESP"
+                bill.Adornee = head
+                bill.Size = UDim2.new(0,120,0,25)
+                bill.AlwaysOnTop = true
+                bill.LightInfluence = 0
+                bill.StudsOffset = Vector3.new(0,9.5,0)
+                local label = Instance.new("TextLabel")
+                label.Parent = bill
+                label.Size = UDim2.new(1,0,1,0)
+                label.BackgroundTransparency = 1
+                label.Font = Enum.Font.Gotham
+                label.TextSize = 10
+                label.TextColor3 = Color3.new(1,1,1)
+                label.TextStrokeTransparency = 0
+                label.TextStrokeColor3 = Color3.new(0,0,0)
+                label.Text = plr.Name
+                label.RichText = true
+                bill.Parent = head
+                espNames[plr] = bill
+            else
+                bill.Enabled = true
+            end
+        elseif espNames[plr] then
+            espNames[plr].Enabled = false
         end
     end
 
-    if DistanceEnabled.Value then
-        local root = plr.Character:FindFirstChild("HumanoidRootPart")
-        if root then
-            local dist = math.floor((root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
+    -- Distance
+    local root = plr.Character:FindFirstChild("HumanoidRootPart")
+    if root then
+        local dist = math.floor((root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
+        if DistanceEnabled.Value then
             local billData = espDistances[plr]
             if not billData then
                 local bill = Instance.new("BillboardGui")
@@ -536,13 +545,13 @@ local function CreateNameDistance(plr)
                 bill.Size = UDim2.new(0,80,0,20)
                 bill.AlwaysOnTop = true
                 bill.LightInfluence = 0
-                bill.StudsOffset = Vector3.new(0,-3,0)
+                bill.StudsOffset = Vector3.new(0,-9.5,0)
                 local label = Instance.new("TextLabel")
                 label.Parent = bill
                 label.Size = UDim2.new(1,0,1,0)
                 label.BackgroundTransparency = 1
                 label.Font = Enum.Font.Gotham
-                label.TextSize = 12
+                label.TextSize = 10
                 label.TextColor3 = Color3.new(1,1,1)
                 label.TextStrokeTransparency = 0
                 label.TextStrokeColor3 = Color3.new(0,0,0)
@@ -552,8 +561,10 @@ local function CreateNameDistance(plr)
                 espDistances[plr] = {bill=bill,label=label}
             else
                 billData.label.Text = "Distance: "..dist.."m"
-                billData.bill.Enabled = DistanceEnabled.Value
+                billData.bill.Enabled = true
             end
+        elseif espDistances[plr] then
+            espDistances[plr].bill.Enabled = false
         end
     end
 end
@@ -619,36 +630,40 @@ local function CreateTracer(plr)
     end
 end
 
--- Update Loop
+-- Main update loop
 RunService.RenderStepped:Connect(function()
-    hue = (hue + 0.001) % 1
-
+    hue = (hue + 0.001)%1
     for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
+        if plr ~= LocalPlayer then
             -- Box
             if BoxEnabled.Value then
-                CreateBox(plr)
+                if not espBoxes[plr] then CreateBox(plr) end
                 local lines = espBoxes[plr]
-                local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                if root then
-                    local screen, onScreen = worldToViewport(root.Position)
-                    if onScreen then
-                        local size = Vector2.new(50,100)
-                        local corners = {
-                            Vector2.new(screen.X-size.X/2, screen.Y-size.Y/2),
-                            Vector2.new(screen.X+size.X/2, screen.Y-size.Y/2),
-                            Vector2.new(screen.X+size.X/2, screen.Y+size.Y/2),
-                            Vector2.new(screen.X-size.X/2, screen.Y+size.Y/2)
-                        }
-                        local edges={{1,2},{2,3},{3,4},{4,1}}
+                local char = plr.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local root = char.HumanoidRootPart
+                    local scale = root.Size.Y
+                    local corners = {
+                        Vector3.new(-1,2,-1), Vector3.new(1,2,-1), Vector3.new(1,2,1), Vector3.new(-1,2,1),
+                        Vector3.new(-1,-2,-1), Vector3.new(1,-2,-1), Vector3.new(1,-2,1), Vector3.new(-1,-2,1)
+                    }
+                    local screenCorners = {}
+                    local allOnScreen = true
+                    for i, offset in ipairs(corners) do
+                        local worldPos = root.Position + (root.CFrame:VectorToWorldSpace(offset*scale))
+                        local screenPos, onScreen = worldToViewport(worldPos)
+                        screenCorners[i] = screenPos
+                        if not onScreen then allOnScreen = false end
+                    end
+                    if allOnScreen then
+                        local edges={{1,2},{2,3},{3,4},{4,1},{5,6},{6,7},{7,8},{8,5},{1,5},{2,6},{3,7},{4,8}}
                         for i,edge in ipairs(edges) do
-                            lines[i].From = corners[edge[1]]
-                            lines[i].To = corners[edge[2]]
-                            lines[i].Color = (plr == CurrentTarget) and Color3.fromRGB(255,80,80) or Color3.new(1,1,1)
+                            lines[i].From = screenCorners[edge[1]]
+                            lines[i].To = screenCorners[edge[2]]
                             lines[i].Visible = true
                         end
                     else
-                        for _,line in ipairs(lines) do line.Visible=false end
+                        for _,line in ipairs(lines) do line.Visible = false end
                     end
                 end
             elseif espBoxes[plr] then
@@ -662,7 +677,8 @@ RunService.RenderStepped:Connect(function()
             CreateHealth(plr)
             if healthBars[plr] then
                 local h = healthBars[plr]
-                local percent = math.clamp(h.humanoid.Health/h.humanoid.MaxHealth,0,1)
+                local humanoid = h.humanoid
+                local percent = math.clamp(humanoid.Health/humanoid.MaxHealth,0,1)
                 h.frame.Size = UDim2.new(percent,0,1,0)
                 if percent>0.5 then h.frame.BackgroundColor3 = Color3.fromRGB(144,238,144)
                 elseif percent>0.25 then h.frame.BackgroundColor3 = Color3.fromRGB(255,255,102)
@@ -681,16 +697,8 @@ RunService.RenderStepped:Connect(function()
                 local line = tracerLines[plr]
                 line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
                 line.To = Vector2.new(screenPos.X, screenPos.Y)
-                line.Color = (plr == CurrentTarget) and Color3.fromRGB(255,80,80) or Color3.fromHSV(hue,1,1)
+                line.Color = Color3.fromHSV(hue,1,1)
                 line.Visible = TracerEnabled.Value and onScreen
-            end
-
-            -- Name color
-            if espNames[plr] then
-                local label = espNames[plr]:FindFirstChildOfClass("TextLabel")
-                if label then
-                    label.TextColor3 = (plr == CurrentTarget) and Color3.fromRGB(255,80,80) or Color3.new(1,1,1)
-                end
             end
         else
             -- ลบ ESP ของ LocalPlayer
@@ -703,6 +711,9 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+
+EspTab:Divider()
+EspTab:Section({Title="Esp item:"})
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
