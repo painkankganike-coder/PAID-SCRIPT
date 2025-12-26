@@ -524,7 +524,6 @@ local function CreateNameDistance(plr)
         end
     end
 
-    -- Distance ESP
     local root = plr.Character:FindFirstChild("HumanoidRootPart")
     if root and DistanceEnabled.Value then
         local dist = math.floor((root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
@@ -645,7 +644,9 @@ RunService.RenderStepped:Connect(function()
 
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
-            -- Box
+            local isTarget = (CurrentTarget == plr)
+
+            -- Box ESP
             if BoxEnabled.Value then
                 if not espBoxes[plr] then CreateBox(plr) end
                 local lines = espBoxes[plr]
@@ -670,7 +671,7 @@ RunService.RenderStepped:Connect(function()
                         for i,edge in ipairs(edges) do
                             lines[i].From = screenCorners[edge[1]]
                             lines[i].To = screenCorners[edge[2]]
-                            lines[i].Color = (CurrentTarget == plr) and Color3.fromRGB(255,80,80) or Color3.fromRGB(255,255,255)
+                            lines[i].Color = isTarget and Color3.fromRGB(255,80,80) or Color3.fromRGB(255,255,255)
                             lines[i].Visible = true
                         end
                     else
@@ -708,15 +709,15 @@ RunService.RenderStepped:Connect(function()
                 local line = tracerLines[plr]
                 line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
                 line.To = Vector2.new(screenPos.X, screenPos.Y)
-                line.Color = (CurrentTarget == plr) and Color3.fromRGB(255,80,80) or Color3.fromHSV(hue,1,1)
+                line.Color = isTarget and Color3.fromRGB(255,80,80) or Color3.fromHSV(hue,1,1)
                 line.Visible = TracerEnabled.Value and onScreen
             end
 
-            -- เปลี่ยนสี Name ESP ถ้าเป็น CurrentTarget
+            -- เปลี่ยนสี Name ESP
             if espNames[plr] then
                 local label = espNames[plr]:FindFirstChildOfClass("TextLabel")
                 if label then
-                    label.TextColor3 = (CurrentTarget == plr) and Color3.fromRGB(255,80,80) or Color3.new(1,1,1)
+                    label.TextColor3 = isTarget and Color3.fromRGB(255,80,80) or Color3.new(1,1,1)
                 end
             end
         else
