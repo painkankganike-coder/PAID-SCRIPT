@@ -2369,24 +2369,7 @@ CheaterTab:Dropdown({
     end
 })
 
-local UserInputService = game:GetService("UserInputService")
-local SnapKey = Enum.KeyCode.Z -- ค่าตั้งต้น
-
--- Keybind UI
-local SnapKeybind = CheaterTab:Keybind({
-    Title = "Snap Keybind:",
-    Value = "Z",
-    Callback = function(v)
-        SnapKey = Enum.KeyCode[v] -- อัปเดต Keybind
-    end
-})
-
--- ฟังก์ชันตรวจ Input
-UserInputService.InputBegan:Connect(function(input, gpe)
+UserInputService.InputBegan:Connect(function(input,gpe)
     if gpe then return end
-    if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == SnapKey then
-            SnapQuick()
-        end
-    end
+    if input.KeyCode==Enum.KeyCode.Z then SnapQuick() end
 end)
