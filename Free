@@ -28,7 +28,7 @@ local Window = WindUI:CreateWindow({
 
 Window:Tag({
     Title = "Free",
-    Icon = "lock-keyhole",
+    Icon = "lock-keyhole-open",
     Color = Color3.fromHex("#80FF9C"),
     Radius = 13,
 })
