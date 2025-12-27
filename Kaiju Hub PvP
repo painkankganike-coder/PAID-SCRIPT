@@ -1667,6 +1667,11 @@ WeaponTab:Toggle({
     end
 })
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
 local SpeedEnabled = false
 local speedMultiplier = 0.10
 local JumpEnabled = false
