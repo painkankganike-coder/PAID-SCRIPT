@@ -1840,6 +1840,80 @@ CheaterTab:Button({
 
 CheaterTab:Section({Title="Cheater :"})
 
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+
+-- หา CounterTable จาก getgc
+local CounterTable
+pcall(function()
+    for _, Obj in ipairs(getgc(true)) do
+        if typeof(Obj) == "table" and rawget(Obj, "event") and rawget(Obj, "func") then
+            CounterTable = Obj
+            break
+        end
+    end
+end)
+
+-- Net.get Function
+local Net = {}
+local function NetGet(...)
+    if not CounterTable or not CounterTable.func then
+        warn("❌ CounterTable ไม่พบ!")
+        return
+    end
+    local args = {...}
+    CounterTable.func = (CounterTable.func or 0) + 1
+    local success, result = pcall(function()
+        local GetRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get")
+        return GetRemote:InvokeServer(CounterTable.func, unpack(args))
+    end)
+    if not success then
+        warn("[NetGet Error]", result)
+    end
+    return result
+end
+function Net.get(...)
+    return NetGet(...)
+end
+
+-- Claim All Function
+local function ClaimAllQuests()
+    local success, questFrame = pcall(function()
+        return player:WaitForChild("PlayerGui"):WaitForChild("Quests"):WaitForChild("QuestsHolder"):WaitForChild("QuestsScrollingFrame")
+    end)
+    if not success or not questFrame then
+        warn("❌ Quest GUI ไม่พบ! (ยังไม่เปิด Quests)")
+        return 0
+    end
+    
+    local claimed = 0
+    for _, child in ipairs(questFrame:GetChildren()) do
+        if (child:IsA("Frame") or child:IsA("TextButton") or child:IsA("ImageButton")) and child.Name ~= "" then
+            pcall(function()
+                Net.get("claim_quest", child.Name)
+            end)
+            claimed = claimed + 1
+            task.wait(0.2)
+        end
+    end
+    return claimed
+end
+
+CheaterTab:Button({
+    Title = "Claim All Quests",
+    Locked = false,
+    Callback = function()
+        local claimed = ClaimAllQuests()  -- เรียกฟังก์ชัน ClaimAllQuests
+        if claimed > 0 then
+            print("✅ Claimed", claimed, "Quests!")
+        else
+            print("ℹ️ ไม่มี Quest ให้ Claim")
+        end
+    end
+})
+
 CheaterTab:Button({
     Title = "Skip Spin",
     Callback = function()
@@ -2369,7 +2443,24 @@ CheaterTab:Dropdown({
     end
 })
 
-UserInputService.InputBegan:Connect(function(input,gpe)
+local UserInputService = game:GetService("UserInputService")
+local SnapKey = Enum.KeyCode.Z -- ค่าตั้งต้น
+
+-- Keybind UI
+local SnapKeybind = CheaterTab:Keybind({
+    Title = "Snap Keybind:",
+    Value = "Z",
+    Callback = function(v)
+        SnapKey = Enum.KeyCode[v] -- อัปเดต Keybind
+    end
+})
+
+-- ฟังก์ชันตรวจ Input
+UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
-    if input.KeyCode==Enum.KeyCode.Z then SnapQuick() end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == SnapKey then
+            SnapQuick()
+        end
+    end
 end)
