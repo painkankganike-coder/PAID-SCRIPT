@@ -2168,6 +2168,12 @@ CheaterTab:Toggle({
     end
 })
 
+Players.LocalPlayer.CharacterAdded:Connect(function(char)
+    if UndergroundAutoEnabled then
+        UndergroundEnabled = false
+    end
+end)
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
