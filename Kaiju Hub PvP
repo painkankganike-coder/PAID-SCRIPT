@@ -34,7 +34,7 @@ Window:Tag({
 })
 
 Window:Tag({
-    Title = "v 0.8 Test",
+    Title = "v 0.9 Test",
     Color = Color3.fromHex("#646666"),
     Radius = 13,
 })
@@ -1727,8 +1727,8 @@ RunService.RenderStepped:Connect(function()
         handButton:SetDesc(("<font color=\"rgb(0,255,0)\">$%s</font>"):format(tostring(handMoney)))
     end
 end)
-
-CheaterTab:Section({Title="Cheater :"})
+CheaterTab:Divider()
+CheaterTab:Section({Title="speed & jump :"})
 
 CheaterTab:Slider({
     Title = "Speed Multiplier :",
@@ -1818,11 +1818,12 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
-CheaterTab:Space()
+CheaterTab:Divider()
+CheaterTab:Section({Title="invisible :"})
 
 CheaterTab:Button({
     Title = "invisible",
-    Desc = "กดปุ่มล่องหนแล้ว รีเซ็ตตัวเพื่อใช้งานได้ทันที ถ้าหายทำอีกรอบ 🛡️",
+    Desc = "Press the invisibility button and reset yourself to use it immediately. If it disappears, do it again.🛡️",
     Callback = function()
         WindUI:Notify({
             Title = "invisible ✅",
@@ -1837,7 +1838,292 @@ CheaterTab:Button({
     end
 })
 
-CheaterTab:Space()
+CheaterTab:Section({Title="Cheater :"})
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+
+-- หา CounterTable จาก getgc
+local CounterTable
+pcall(function()
+    for _, Obj in ipairs(getgc(true)) do
+        if typeof(Obj) == "table" and rawget(Obj, "event") and rawget(Obj, "func") then
+            CounterTable = Obj
+            break
+        end
+    end
+end)
+
+-- Net.get Function
+local Net = {}
+local function NetGet(...)
+    if not CounterTable or not CounterTable.func then
+        warn("❌ CounterTable ไม่พบ!")
+        return
+    end
+    local args = {...}
+    CounterTable.func = (CounterTable.func or 0) + 1
+    local success, result = pcall(function()
+        local GetRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get")
+        return GetRemote:InvokeServer(CounterTable.func, unpack(args))
+    end)
+    if not success then
+        warn("[NetGet Error]", result)
+    end
+    return result
+end
+function Net.get(...)
+    return NetGet(...)
+end
+
+-- Claim All Function
+local function ClaimAllQuests()
+    local success, questFrame = pcall(function()
+        return player:WaitForChild("PlayerGui"):WaitForChild("Quests"):WaitForChild("QuestsHolder"):WaitForChild("QuestsScrollingFrame")
+    end)
+    if not success or not questFrame then
+        warn("❌ Quest GUI ไม่พบ! (ยังไม่เปิด Quests)")
+        return 0
+    end
+    
+    local claimed = 0
+    for _, child in ipairs(questFrame:GetChildren()) do
+        if (child:IsA("Frame") or child:IsA("TextButton") or child:IsA("ImageButton")) and child.Name ~= "" then
+            pcall(function()
+                Net.get("claim_quest", child.Name)
+            end)
+            claimed = claimed + 1
+            task.wait(0.2)
+        end
+    end
+    return claimed
+end
+
+CheaterTab:Button({
+    Title = "Claim All Quests",
+    Locked = false,
+    Callback = function()
+        local claimed = ClaimAllQuests()  -- เรียกฟังก์ชัน ClaimAllQuests
+        if claimed > 0 then
+            print("✅ Claimed", claimed, "Quests!")
+        else
+            print("ℹ️ ไม่มี Quest ให้ Claim")
+        end
+    end
+})
+
+CheaterTab:Button({
+    Title = "Skip Spin",
+    Callback = function()
+        if _G.autoCratesEnabled then
+            WindUI:Notify({Title="Skip Spin", Content="Already Enabled"})
+            return
+        end
+        _G.autoCratesEnabled = true
+        WindUI:Notify({Title="Skip Spin", Content="Auto Skip Spin Enabled"})
+
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+
+        local CrateModule = require(ReplicatedStorage.Modules.Game.CrateSystem.Crate)
+        local Data_upvr = require(ReplicatedStorage.Modules.Core.Data)
+        local crateUIRemote = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("ShowCrateUI")
+
+        if CrateModule.spin then
+            CrateModule.spin = function(crateClass, reward, crateInstance)
+                if crateClass.FinishSpin then
+                    crateClass:FinishSpin(crateInstance, reward)
+                else
+                    crateInstance:SetAttribute("reward", reward)
+                end
+            end
+        end
+
+        local function AutoOpenCrate(crateInstance)
+            if not crateInstance then return end
+
+            local method = "money"
+            local price = crateInstance:GetAttribute("price")
+            local crateName = crateInstance.Parent.Name
+
+            if Data_upvr.money.hand < price and Data_upvr.crate_tokens[crateName] and Data_upvr.crate_tokens[crateName] > 0 then
+                method = "token"
+            end
+
+            local reward, err = Net_upvr.get("open_crate", crateInstance, method)
+            if reward then
+                if CrateModule.FinishSpin then
+                    CrateModule.FinishSpin(crateInstance, reward)
+                else
+                    crateInstance:SetAttribute("reward", reward)
+                end
+
+                if crateUIRemote then
+                    pcall(function()
+                        crateUIRemote:InvokeServer(crateName)
+                    end)
+                end
+
+                if crateInstance:FindFirstChild("Buy") and crateInstance.Buy:IsA("RemoteFunction") then
+                    pcall(function()
+                        crateInstance.Buy:InvokeServer()
+                    end)
+                end
+            end
+        end
+
+        spawn(function()
+            while _G.autoCratesEnabled do
+                local InventoryFolder = player:WaitForChild("Inventory")
+                for _, crate in ipairs(InventoryFolder:GetChildren()) do
+                    if crate:GetAttribute("opened") ~= true then
+                        AutoOpenCrate(crate)
+                        task.wait(0.1) 
+                    end
+                end
+                task.wait(0.3)
+            end
+        end)
+    end
+})
+
+Players.LocalPlayer.CharacterAdded:Connect(function(char)
+    if UndergroundAutoEnabled then
+        UndergroundEnabled = false
+    end
+end)
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local ANIM_ID = "rbxassetid://104767795538635"
+local currentAnimTrack
+
+local function PlayAntiLook()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoid = char:WaitForChild("Humanoid")
+    local anim = Instance.new("Animation")
+    anim.AnimationId = ANIM_ID
+    currentAnimTrack = humanoid:LoadAnimation(anim)
+    currentAnimTrack.Looped = true
+    currentAnimTrack:Play()
+end
+
+local function StopAntiLook()
+    if currentAnimTrack then
+        currentAnimTrack:Stop()
+        currentAnimTrack = nil
+    end
+end
+
+CheaterTab:Toggle({
+    Title = "Anti Lock",
+    Value = AntiLookEnabled,
+    Callback = function(state)
+        AntiLookEnabled = state
+        if state then PlayAntiLook() else StopAntiLook() end
+    end
+})
+
+local Players = game:GetService("Players")  
+local RunService = game:GetService("RunService")  
+local ReplicatedStorage = game:GetService("ReplicatedStorage")  
+  
+local player = Players.LocalPlayer  
+local char = player.Character or player.CharacterAdded:Wait()  
+local rootPart = char:WaitForChild("HumanoidRootPart")  
+  
+local PickupEnabled = false  
+local CounterTable  
+  
+local function FindCounterTable()  
+    for _, Obj in ipairs(getgc(true)) do  
+        if typeof(Obj) == "table" and rawget(Obj, "event") and rawget(Obj, "func") then  
+            return Obj  
+        end  
+    end  
+    return nil  
+end  
+  
+local function NetGet(...)  
+    if not CounterTable or not CounterTable.func then return end  
+    local args = {...}  
+    CounterTable.func = (CounterTable.func or 0) + 1  
+    local success, result = pcall(function()  
+        local GetRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get")  
+        return GetRemote:InvokeServer(CounterTable.func, unpack(args))  
+    end)  
+    if not success then warn("[NetGet Error]", result) end  
+    return result  
+end  
+  
+local function CheckAndPickup()  
+    if not PickupEnabled then return end  
+    if not rootPart or not rootPart.Parent then return end  
+  
+    local droppedFolder = workspace:FindFirstChild("DroppedItems") or workspace:FindFirstChild("DroppedItem")  
+    if not droppedFolder then return end  
+  
+    for _, item in ipairs(droppedFolder:GetChildren()) do  
+        if item:IsA("Model") or item:IsA("BasePart") then
+            local success, modelCF = pcall(function()  
+                if item:IsA("Model") then
+                    return (item.GetPivot and item:GetPivot() or item:GetModelCFrame())
+                else
+                    return item.CFrame
+                end
+            end)
+            if not success or not modelCF then continue end
+            local distance = (rootPart.Position - modelCF.Position).Magnitude
+            if distance <= 15 then
+                pcall(function()
+                    NetGet("pickup_dropped_item", item)
+                end)
+            end
+        end
+    end
+end  
+  
+local function UpdateChar(newChar)  
+    char = newChar  
+    rootPart = char:WaitForChild("HumanoidRootPart")  
+end  
+  
+player.CharacterAdded:Connect(UpdateChar)  
+if char then  
+    UpdateChar(char)  
+end  
+  
+-- อัปเดต CounterTable และ rootPart ทุก 30 วินาที  
+task.spawn(function()  
+    while true do  
+        if PickupEnabled then  
+            CounterTable = FindCounterTable()  
+            if player.Character then  
+                rootPart = player.Character:FindFirstChild("HumanoidRootPart")  
+            end  
+        end  
+        task.wait(30)  
+    end  
+end)  
+  
+-- Loop ทุกเฟรม  
+RunService.Heartbeat:Connect(CheckAndPickup)  
+  
+-- WindUI Toggle  
+CheaterTab:Toggle({  
+    Title = "Pickup Items",  
+    Value = PickupEnabled,  
+    Callback = function(state)  
+        PickupEnabled = state  
+        print("🧲 Auto Pickup Items:", state and "ON" or "OFF")  
+    end  
+})
+
+CheaterTab:Divider()
+CheaterTab:Section({Title="att :"})
 
 -- Toggle Hide Name
 CheaterTab:Toggle({
@@ -1877,36 +2163,6 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
-local ANIM_ID = "rbxassetid://104767795538635"
-local currentAnimTrack
-
-local function PlayAntiLook()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local humanoid = char:WaitForChild("Humanoid")
-    local anim = Instance.new("Animation")
-    anim.AnimationId = ANIM_ID
-    currentAnimTrack = humanoid:LoadAnimation(anim)
-    currentAnimTrack.Looped = true
-    currentAnimTrack:Play()
-end
-
-local function StopAntiLook()
-    if currentAnimTrack then
-        currentAnimTrack:Stop()
-        currentAnimTrack = nil
-    end
-end
-
-CheaterTab:Toggle({
-    Title = "Anti Lock",
-    Value = AntiLookEnabled,
-    Callback = function(state)
-        AntiLookEnabled = state
-        if state then PlayAntiLook() else StopAntiLook() end
-    end
-})
-
--- ตัวแปร
 local UndergroundEnabled = false
 local UndergroundAutoEnabled = true -- toggle เปิด/ปิด
 local UndergroundDepth = 50       -- ความลึก
@@ -1992,12 +2248,6 @@ CheaterTab:Toggle({
     end
 })
 
-Players.LocalPlayer.CharacterAdded:Connect(function(char)
-    if UndergroundAutoEnabled then
-        UndergroundEnabled = false
-    end
-end)
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -2065,98 +2315,6 @@ player.CharacterAdded:Connect(function()
         startAntiRagdoll()
     end
 end)
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local player = Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local rootPart = char:WaitForChild("HumanoidRootPart")
-
-local PickupEnabled = false
-local CounterTable
-
-local function FindCounterTable()
-    for _, Obj in ipairs(getgc(true)) do
-        if typeof(Obj) == "table" and rawget(Obj, "event") and rawget(Obj, "func") then
-            return Obj
-        end
-    end
-    return nil
-end
-
-local function NetGet(...)
-    if not CounterTable or not CounterTable.func then return end
-    local args = {...}
-    CounterTable.func = (CounterTable.func or 0) + 1
-    local success, result = pcall(function()
-        local GetRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get")
-        return GetRemote:InvokeServer(CounterTable.func, unpack(args))
-    end)
-    if not success then warn("[NetGet Error]", result) end
-    return result
-end
-
-local function CheckAndPickup()
-    if not PickupEnabled then return end
-    if not rootPart or not rootPart.Parent then return end
-
-    local droppedFolder = workspace:FindFirstChild("DroppedItems") or workspace:FindFirstChild("DroppedItem")
-    if not droppedFolder then return end
-
-    for _, item in ipairs(droppedFolder:GetChildren()) do
-        if item.Name == "Money" then continue end
-        if item:IsA("Model") and item:FindFirstChildWhichIsA("BasePart") then
-            local success, modelCF = pcall(function()
-                return (item.GetPivot and item:GetPivot() or item:GetModelCFrame())
-            end)
-            if not success or not modelCF then continue end
-            local distance = (rootPart.Position - modelCF.Position).Magnitude
-            if distance <= 15 then
-                pcall(function()
-                    NetGet("pickup_dropped_item", item)
-                end)
-            end
-        end
-    end
-end
-
-local function UpdateChar(newChar)
-    char = newChar
-    rootPart = char:WaitForChild("HumanoidRootPart")
-end
-
-player.CharacterAdded:Connect(UpdateChar)
-if char then
-    UpdateChar(char)
-end
-
--- อัปเดต CounterTable และ rootPart ทุก 30 วินาที
-task.spawn(function()
-    while true do
-        if PickupEnabled then
-            CounterTable = FindCounterTable()
-            if player.Character then
-                rootPart = player.Character:FindFirstChild("HumanoidRootPart")
-            end
-        end
-        task.wait(30)
-    end
-end)
-
--- Loop ทุกเฟรม
-RunService.Heartbeat:Connect(CheckAndPickup)
-
--- WindUI Toggle
-CheaterTab:Toggle({
-    Title = "Pickup Items",
-    Value = PickupEnabled,
-    Callback = function(state)
-        PickupEnabled = state
-        print("🧲 Auto Pickup Items:", state and "ON" or "OFF")
-    end
-})
 
 local replicated = game:GetService("ReplicatedStorage")
 local SprintModule = require(replicated.Modules.Game.Sprint)
@@ -2285,7 +2443,24 @@ CheaterTab:Dropdown({
     end
 })
 
-UserInputService.InputBegan:Connect(function(input,gpe)
+local UserInputService = game:GetService("UserInputService")
+local SnapKey = Enum.KeyCode.Z -- ค่าตั้งต้น
+
+-- Keybind UI
+local SnapKeybind = CheaterTab:Keybind({
+    Title = "Snap Keybind:",
+    Value = "Z",
+    Callback = function(v)
+        SnapKey = Enum.KeyCode[v] -- อัปเดต Keybind
+    end
+})
+
+-- ฟังก์ชันตรวจ Input
+UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
-    if input.KeyCode==Enum.KeyCode.Z then SnapQuick() end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == SnapKey then
+            SnapQuick()
+        end
+    end
 end)
