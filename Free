@@ -12,7 +12,6 @@ local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
     game.Players.LocalPlayer,
     game:GetService("ReplicatedStorage")
 
-
 local Window = WindUI:CreateWindow({
     Title = "☃️ Kaiju Hub | Pvp",
     Icon = "layout-list", 
@@ -20,7 +19,7 @@ local Window = WindUI:CreateWindow({
     Folder = "MyKaijuHub",
     Size = UDim2.fromOffset(400, 350),
     Transparent = true,
-    Theme = "Light",
+    Theme = "Dark",
     Resizable = true,
     SideBarWidth = 200,
     HideSearchBar = false,
@@ -29,13 +28,13 @@ local Window = WindUI:CreateWindow({
 
 Window:Tag({
     Title = "Free",
-    Icon = "lock-keyhole-open",
-    Color = Color3.fromHex("#818282"),
+    Icon = "lock-keyhole",
+    Color = Color3.fromHex("#80FF9C"),
     Radius = 13,
 })
 
 Window:Tag({
-    Title = "v 0.5 b",
+    Title = "v 0.5.3 b",
     Color = Color3.fromHex("#646666"),
     Radius = 13,
 })
@@ -292,18 +291,26 @@ oldFire = hookfunction(send.FireServer, function(self, ...)
             beam.Material = Enum.Material.Neon
             beam.Size = Vector3.new(0.05,0.05,distance)
             beam.CFrame = CFrame.new(ourHead.Position, aimPos) * CFrame.new(0,0,-distance/2)
-            beam.Color = Color3.fromHSV(math.random(),1,1)
+            beam.Color = Color3.new(1,1,1) -- เริ่มสีขาว
             game:GetService("Debris"):AddItem(beam, 1)
+
+            task.delay(0.5, function()
+                if beam and beam.Parent then
+                    local hue = math.random()
+                    beam.Color = Color3.fromHSV(hue, 1, 1)
+                end
+            end)
         end
     end
     return oldFire(self, unpack(args))
 end)
 
 RunService.RenderStepped:Connect(function()
+
     fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     fovCircle.Radius = FOVRadiusValue.Value
     hue = (hue + 0.0005) % 1
-    fovCircle.Color = Color3.fromHSV(hue, 1, 1)
+    fovCircle.Color = Color3.fromHSV(hue, 1, 1) -- FOV เป็นสีรุ้ง
 
     if not SilentAimEnabledValue.Value then
         tracerLine.Visible = false
@@ -320,7 +327,7 @@ RunService.RenderStepped:Connect(function()
             local centerScreen = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
             tracerLine.From = centerScreen
             tracerLine.To = Vector2.new(screenPos.X, screenPos.Y)
-            tracerLine.Color = Color3.fromHSV(hue, 1, 1)
+            tracerLine.Color = Color3.fromRGB(255,80,80) -- Tracer เป็นสีแดงอ่อนคงที่
             tracerLine.Visible = true
         else
             tracerLine.Visible = false
@@ -373,7 +380,7 @@ CombatTab:Slider({
 CombatTab:Slider({
     Title = "Lock Distance :",
     Step = 25,
-    Value = {Min = 50, Max = 1500, Default = LockDistanceValue.Value},
+    Value = {Min = 50, Max = 1000, Default = LockDistanceValue.Value},
     Callback = function(value) LockDistanceValue.Value = value end
 })
 
@@ -450,8 +457,6 @@ EspTab:Toggle({Title = "Health", Value = HealthEnabled.Value, Callback = functio
 EspTab:Toggle({Title = "Highlight", Value = HighlightEnabled.Value, Callback = function(state) HighlightEnabled.Value = state end})
 EspTab:Toggle({Title = "Tracer", Value = TracerEnabled.Value, Callback = function(state) TracerEnabled.Value = state end})
 
-EspTab:Divider()
-EspTab:Section({Title="Esp items:"})
 -- ESP Storage
 local espBoxes, espNames, espDistances, healthBars, highlights, tracerLines = {}, {}, {}, {}, {}, {}
 local hue = 0
@@ -703,6 +708,299 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+EspTab:Divider()
+EspTab:Section({Title="Esp item:"})
+
+local Players = game:GetService("Players")      
+local RunService = game:GetService("RunService")      
+local Workspace = game:GetService("Workspace")      
+      
+local player = Players.LocalPlayer      
+local camera = Workspace.CurrentCamera      
+      
+local ItemESP_Enabled = false  -- ตัวแปรเปิดปิด ESP      
+local ESP_Items = {}  -- เก็บ Highlight + Drawing ของแต่ละไอเทม      
+
+-- กำหนดสีตามชื่อไอเทม
+local ITEM_COLORS = {
+    ["Uzi"] = Color3.fromRGB(0, 170, 255),       -- ฟ้า
+    ["Hunting"] = Color3.fromRGB(0, 170, 255),   
+    ["Glock"] = Color3.fromRGB(0, 170, 255),    
+    ["Sawnoff"] = Color3.fromRGB(0, 170, 255),  
+    ["P226"] = Color3.fromRGB(0, 170, 255),     
+
+    ["C9"] = Color3.fromRGB(0, 255, 0),         -- เขียว
+    ["G3"] = Color3.fromRGB(0, 255, 0),         
+
+    ["M24"] = Color3.fromRGB(180, 0, 255),      -- ม่วง
+    ["Double Draco"] = Color3.fromRGB(180, 0, 255),  
+
+    ["Remington"] = Color3.fromRGB(255, 215, 0), -- ทอง
+    ["AK47"] = Color3.fromRGB(255, 215, 0),     
+    ["MP5"] = Color3.fromRGB(255, 215, 0),     
+    ["RPG"] = Color3.fromRGB(255, 215, 0)      
+}
+
+local DEFAULT_HIGHLIGHT_COLOR = Color3.fromRGB(200, 0, 255)  -- สีม่วงสำหรับไม่ตรงรายการ
+local DEFAULT_TEXT_COLOR = Color3.fromRGB(255, 255, 255)  
+
+-- โฟลเดอร์ของตก
+local droppedFolder = Workspace:FindFirstChild("DroppedItem") or Workspace:FindFirstChild("DroppedItems")      
+if not droppedFolder then      
+    warn("ไม่พบโฟลเดอร์ DroppedItem / DroppedItems")      
+    return      
+end      
+
+-- ฟังก์ชันเลือกสีตามชื่อ
+local function getItemColor(itemName)
+    for key, color in pairs(ITEM_COLORS) do
+        if string.find(itemName, key) then
+            return color
+        end
+    end
+    return DEFAULT_HIGHLIGHT_COLOR
+end
+
+-- ฟังก์ชันสร้าง ESP ให้ไอเทม 1 ชิ้น      
+local function createItemESP(item)      
+    if not ItemESP_Enabled then return end      
+    if ESP_Items[item] then return end      
+    if item.Name == "Money" then return end      
+    if not item:FindFirstChild("Handle") and not item.PrimaryPart then return end      
+
+    local handle = item:FindFirstChild("Handle") or item.PrimaryPart      
+    local color = getItemColor(item.Name)
+      
+    -- Highlight      
+    local highlight = Instance.new("Highlight")      
+    highlight.FillColor = color      
+    highlight.OutlineColor = color      
+    highlight.FillTransparency = 0.3      
+    highlight.OutlineTransparency = 0      
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop      
+    highlight.Parent = item      
+      
+    -- ชื่อไอเทม      
+    local nameText = Drawing.new("Text")      
+    nameText.Size = 7      
+    nameText.Color = color      
+    nameText.Center = true      
+    nameText.Outline = true      
+    nameText.Font = 2      
+    nameText.Visible = true      
+    nameText.Text = item.Name      
+      
+    -- ระยะทาง      
+    local distanceText = Drawing.new("Text")      
+    distanceText.Size = 7      
+    distanceText.Color = DEFAULT_TEXT_COLOR      
+    distanceText.Center = true      
+    distanceText.Outline = true      
+    distanceText.Font = 2      
+    distanceText.Visible = true      
+      
+    ESP_Items[item] = {highlight = highlight, name = nameText, distance = distanceText, handle = handle, color=color}      
+      
+    -- ลบเมื่อไอเทมหาย      
+    item.AncestryChanged:Connect(function()      
+        if not item.Parent then      
+            if ESP_Items[item] then      
+                highlight:Destroy()      
+                nameText:Remove()      
+                distanceText:Remove()      
+                ESP_Items[item] = nil      
+            end      
+        end      
+    end)      
+end      
+
+-- เปิด ESP
+local function enableItemESP()      
+    ItemESP_Enabled = true      
+    for _, item in pairs(droppedFolder:GetChildren()) do      
+        if item:IsA("Model") or item:IsA("Tool") or item:IsA("Folder") then      
+            task.spawn(function()      
+                task.wait(0.3)      
+                createItemESP(item)      
+            end)      
+        end      
+    end      
+end      
+
+-- ปิด ESP
+local function disableItemESP()      
+    ItemESP_Enabled = false      
+    for item, data in pairs(ESP_Items) do      
+        if data.highlight then data.highlight:Destroy() end      
+        if data.name then data.name:Remove() end      
+        if data.distance then data.distance:Remove() end      
+    end      
+    ESP_Items = {}      
+end      
+
+-- อัปเดตตำแหน่งชื่อ + ระยะทางทุกเฟรม      
+RunService.Heartbeat:Connect(function()      
+    if not ItemESP_Enabled then return end      
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end      
+    local rootPos = player.Character.HumanoidRootPart.Position      
+      
+    for item, data in pairs(ESP_Items) do      
+        if item and item.Parent and data.handle and data.handle.Parent then      
+            local worldPos = data.handle.Position + Vector3.new(0, 2, 0)      
+            local screenPos, onScreen = camera:WorldToViewportPoint(worldPos)      
+      
+            if onScreen then      
+                local screen2D = Vector2.new(screenPos.X, screenPos.Y)      
+                local distance = math.floor((rootPos - data.handle.Position).Magnitude)      
+      
+                data.name.Position = screen2D      
+                data.name.Color = data.color  -- อัพเดตสีตามชื่อ      
+                data.name.Visible = true      
+      
+                data.distance.Position = screen2D + Vector2.new(0, 18)      
+                data.distance.Text = distance .. "m"      
+                data.distance.Color = DEFAULT_TEXT_COLOR      
+                data.distance.Visible = true      
+            else      
+                data.name.Visible = false      
+                data.distance.Visible = false      
+            end      
+        else      
+            -- ลบถ้าไอเทมหาย      
+            if data.highlight then data.highlight:Destroy() end      
+            if data.name then data.name:Remove() end      
+            if data.distance then data.distance:Remove() end      
+            ESP_Items[item] = nil      
+        end      
+    end      
+end)      
+
+-- เมื่อมีของตกใหม่      
+droppedFolder.ChildAdded:Connect(function(item)      
+    task.wait(0.5)      
+    createItemESP(item)      
+end)      
+
+-- WindUI Toggle      
+EspTab:Toggle({      
+    Title = "Dropped Items",      
+    Value = ItemESP_Enabled,      
+    Callback = function(state)      
+        if state then      
+            enableItemESP()      
+        else      
+            disableItemESP()      
+        end      
+    end      
+})
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
+
+-- โฟลเดอร์ของของตก
+local droppedFolder = Workspace:FindFirstChild("DroppedItem") or Workspace:FindFirstChild("DroppedItems")
+if not droppedFolder then
+    warn("ไม่พบโฟลเดอร์ DroppedItem / DroppedItems")
+    return
+end
+
+local MoneyESP_Enabled = false
+local ESP_Money = {}
+
+local MONEY_HIGHLIGHT_COLOR = Color3.fromRGB(0,255,0)
+local MONEY_NAME_COLOR = Color3.fromRGB(0,255,0)
+
+local function createMoneyESP(item)
+    if not MoneyESP_Enabled then return end
+    if ESP_Money[item] then return end
+    if item.Name ~= "Money" then return end
+    local handle = item:FindFirstChild("Handle") or item.PrimaryPart or item:FindFirstChildOfClass("Part")
+    if not handle then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = MONEY_HIGHLIGHT_COLOR
+    highlight.OutlineColor = MONEY_HIGHLIGHT_COLOR
+    highlight.FillTransparency = 0.3
+    highlight.OutlineTransparency = 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = item
+
+    local nameText = Drawing.new("Text")
+    nameText.Size = 7
+    nameText.Color = MONEY_NAME_COLOR
+    nameText.Center = true
+    nameText.Outline = true
+    nameText.Font = 2
+    nameText.Visible = true
+    nameText.Text = item.Name
+
+    ESP_Money[item] = {highlight = highlight, name = nameText, handle = handle}
+
+    item.AncestryChanged:Connect(function()
+        if not item.Parent and ESP_Money[item] then
+            highlight:Destroy()
+            nameText:Remove()
+            ESP_Money[item] = nil
+        end
+    end)
+end
+
+local function enableMoneyESP()
+    MoneyESP_Enabled = true
+    for _, item in pairs(droppedFolder:GetChildren()) do
+        createMoneyESP(item)
+    end
+end
+
+local function disableMoneyESP()
+    MoneyESP_Enabled = false
+    for item, data in pairs(ESP_Money) do
+        if data.highlight then data.highlight:Destroy() end
+        if data.name then data.name:Remove() end
+    end
+    ESP_Money = {}
+end
+
+RunService.Heartbeat:Connect(function()
+    if not MoneyESP_Enabled then return end
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    for item, data in pairs(ESP_Money) do
+        if item and item.Parent and data.handle and data.handle.Parent then
+            local worldPos = data.handle.Position + Vector3.new(0,2,0)
+            local screenPos, onScreen = camera:WorldToViewportPoint(worldPos)
+            if onScreen then
+                data.name.Position = Vector2.new(screenPos.X, screenPos.Y)
+                data.name.Visible = true
+            else
+                data.name.Visible = false
+            end
+        else
+            if data.highlight then data.highlight:Destroy() end
+            if data.name then data.name:Remove() end
+            ESP_Money[item] = nil
+        end
+    end
+end)
+
+droppedFolder.ChildAdded:Connect(function(item)
+    task.wait(0.5)
+    createMoneyESP(item)
+end)
+
+EspTab:Toggle({
+    Title = "Money",
+    Value = MoneyESP_Enabled,
+    Callback = function(state)
+        if state then enableMoneyESP() else disableMoneyESP() end
+    end
+})
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
@@ -869,7 +1167,7 @@ local updatedTools = {}
 WeaponTab:Slider({
     Title = "Fire Rate",
     Step = 1,
-    Value = {Min = 100, Max = 1500, Default = FireRateValue.Value},
+    Value = {Min = 100, Max = 1000, Default = FireRateValue.Value},
     Callback = function(value)
         FireRateValue.Value = value
     end
@@ -1158,7 +1456,7 @@ CheaterTab:Section({Title="Cheater :"})
 
 CheaterTab:Slider({
     Title = "Speed Multiplier :",
-    Value = {Min = 0.00, Max = 0.15, Default = speedMultiplier},
+    Value = {Min = 0.00, Max = 0.10, Default = speedMultiplier},
     Step = 0.05,
     Callback = function(value)
         speedMultiplier = value
@@ -1246,6 +1544,7 @@ end)
 
 CheaterTab:Space()
 
+-- Toggle Hide Name
 CheaterTab:Toggle({
     Title = "Hide Name",
     Value = HideNameEnabled,
@@ -1268,6 +1567,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- ตรวจจับตอน Spawn ใหม่
 LocalPlayer.CharacterAdded:Connect(function(char)
     if HideNameEnabled then
         -- ตรวจสอบทุกตัวลูกที่ถูกสร้างใน Character ใหม่
@@ -1313,11 +1613,12 @@ CheaterTab:Toggle({
 
 -- ตัวแปร
 local UndergroundEnabled = false
-local UndergroundAutoEnabled = true
-local UndergroundDepth = 50
-local SpinSpeed = 2080
-local UndergroundAngle = 0
+local UndergroundAutoEnabled = true -- toggle เปิด/ปิด
+local UndergroundDepth = 50       -- ความลึก
+local SpinSpeed = 2080            -- ความเร็วหมุนรอบตัว
+local UndergroundAngle = 0        -- มุมหมุน
 
+-- ฟังก์ชันเริ่มมุด
 local function StartUnderground()
     local char = LocalPlayer.Character
     if not char then return end
@@ -1536,6 +1837,7 @@ if char then
     UpdateChar(char)
 end
 
+-- อัปเดต CounterTable และ rootPart ทุก 30 วินาที
 task.spawn(function()
     while true do
         if PickupEnabled then
@@ -1548,13 +1850,16 @@ task.spawn(function()
     end
 end)
 
+-- Loop ทุกเฟรม
 RunService.Heartbeat:Connect(CheckAndPickup)
 
+-- WindUI Toggle
 CheaterTab:Toggle({
     Title = "Pickup Items",
     Value = PickupEnabled,
     Callback = function(state)
         PickupEnabled = state
+        print("🧲 Auto Pickup Items:", state and "ON" or "OFF")
     end
 })
 
@@ -1586,3 +1891,106 @@ CheaterTab:Toggle({
         c().Infinitestamina = state
     end
 })
+
+CheaterTab:Divider()
+CheaterTab:Section({Title="Snap PC key [ Z ]"})
+
+local JumpEnabled = false
+local SnapHeightOffset = -7
+local SnapDirection = "Down"
+local SnapDuration = 0.1
+local SnapBlockDuration = 5
+
+local isRunning = false
+
+local function SnapQuick()
+    if isRunning then return end
+    isRunning = true
+
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then isRunning=false return end
+
+    local blocks = {}
+    for _, part in ipairs(char:GetChildren()) do
+        if part:IsA("BasePart") then
+            local blk = Instance.new("Part")
+            blk.Size = part.Size
+            blk.CFrame = part.CFrame
+            blk.Anchored = true
+            blk.CanCollide = false
+            blk.Material = Enum.Material.Neon
+            blk.Transparency = 0.5
+            blk.Color = Color3.fromRGB(0,170,255) -- สีฟ้า
+            blk.Parent = workspace
+            table.insert(blocks, blk)
+        end
+    end
+
+    -- ตั้งเวลาให้ลบบล็อกหลัง 5 วินาที
+    task.spawn(function()
+        task.wait(SnapBlockDuration)
+        for _, blk in ipairs(blocks) do
+            if blk and blk.Parent then blk:Destroy() end
+        end
+    end)
+
+    hum.Sit = true
+    local origY = hrp.Position.Y
+    local offset = math.abs(SnapHeightOffset)
+    if SnapDirection == "Down" then offset = -offset end
+
+    local conn
+    conn = RunService.RenderStepped:Connect(function()
+        if hrp and hrp.Parent then
+            hrp.CFrame = hrp.CFrame:Lerp(CFrame.new(hrp.Position.X, origY+offset, hrp.Position.Z),0.8)
+
+            for i, part in ipairs(char:GetChildren()) do
+                if part:IsA("BasePart") and blocks[i] then
+                    local blk = blocks[i]
+                    if blk and blk.Parent then
+                        blk.CFrame = part.CFrame
+                    end
+                end
+            end
+        end
+    end)
+
+    task.wait(SnapDuration)
+    if conn then conn:Disconnect() conn=nil end
+    hum.Sit = false
+    isRunning=false
+end
+
+CheaterTab:Button({
+    Title="Snap Click",
+    Locked=false,
+    Callback=function() SnapQuick() end
+})
+
+-- Slider Snap Depth
+CheaterTab:Slider({
+    Title="Snap Depth",
+    Step=1,
+    Value={Min=1,Max=50,Default=math.abs(SnapHeightOffset)},
+    Callback=function(val)
+        SnapHeightOffset=(SnapDirection=="Down" and -1 or 1)*val
+    end
+})
+
+-- Dropdown Snap Direction
+CheaterTab:Dropdown({
+    Title="Snap Direction",
+    Values={"Down","Up"},
+    Value=SnapDirection,
+    Callback=function(opt)
+        SnapDirection=opt
+        SnapHeightOffset=(opt=="Down" and -1 or 1)*math.abs(SnapHeightOffset)
+    end
+})
+
+UserInputService.InputBegan:Connect(function(input,gpe)
+    if gpe then return end
+    if input.KeyCode==Enum.KeyCode.Z then SnapQuick() end
+end)
