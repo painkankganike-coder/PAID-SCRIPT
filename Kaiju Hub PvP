@@ -2036,6 +2036,110 @@ CheaterTab:Toggle({
     end  
 })
 
+local AutoSprintEnabled = false
+
+PlayerTab:Toggle({
+    Title = "Infinite Stamina",
+    Default = false,
+    Callback = function(state)
+        AutoSprintEnabled = state
+
+        if state then
+            local SprintModule
+            local ok = pcall(function()
+                SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
+            end)
+            if not ok or not SprintModule then return end
+
+            local consume_stamina = SprintModule.consume_stamina
+            local SprintBar
+
+            pcall(function()
+                local ups = debug.getupvalues(consume_stamina)
+                SprintBar = ups[2] and ups[2].sprint_bar
+            end)
+
+            if not SprintBar or not SprintBar.update then return end
+
+            getgenv().OriginalSprintUpdate = SprintBar.update
+
+            SprintBar.update = function()
+                return 1
+            end
+
+            getgenv().AutoSprintLoop = task.spawn(function()
+                while AutoSprintEnabled do
+                    pcall(function()
+                        if Net then
+                            Net.send("set_sprinting_1", true)
+                            task.wait(0.4)
+                            Net.send("set_sprinting_1", false)
+                        end
+                    end)
+                    task.wait(0.15)
+                end
+                pcall(function()
+                    if Net then
+                        Net.send("set_sprinting_1", false)
+                    end
+                end)
+            end)
+
+            WindUI:Notify({
+                Title = "INF STAMINA",
+                Description = "เปิดใช้งานแล้ว",
+                Duration = 3
+            })
+        else
+            if getgenv().AutoSprintLoop then
+                task.cancel(getgenv().AutoSprintLoop)
+                getgenv().AutoSprintLoop = nil
+            end
+
+            pcall(function()
+                if Net then
+                    Net.send("set_sprinting_1", false)
+                end
+            end)
+
+            local SprintModule
+            pcall(function()
+                SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
+            end)
+
+            if SprintModule and getgenv().OriginalSprintUpdate then
+                pcall(function()
+                    local consume_stamina = SprintModule.consume_stamina
+                    local ups = debug.getupvalues(consume_stamina)
+                    local SprintBar = ups[2] and ups[2].sprint_bar
+                    if SprintBar then
+                        SprintBar.update = getgenv().OriginalSprintUpdate
+                    end
+                end)
+            end
+
+            getgenv().OriginalSprintUpdate = nil
+
+            WindUI:Notify({
+                Title = "INF STAMINA",
+                Description = "ปิดแล้ว",
+                Duration = 3
+            })
+        end
+    end
+end)
+
+pcall(function()
+    if kickF then
+        hookfunction(kickF, function(p12, p13, p14, p15, ...)
+            return p12(p13, p14, p15, ...)
+        end)
+        print("✅ Kick function hooked successfully")
+    else
+        warn("⚠️ kickF not found")
+    end
+end)
+
 CheaterTab:Divider()
 CheaterTab:Section({Title="att :"})
 
@@ -2235,35 +2339,6 @@ player.CharacterAdded:Connect(function()
         startAntiRagdoll()
     end
 end)
-
-local replicated = game:GetService("ReplicatedStorage")
-local SprintModule = require(replicated.Modules.Game.Sprint)
-local consume_stamina = SprintModule.consume_stamina
-local SprintBar = debug.getupvalue(consume_stamina, 2).sprint_bar
-
-local function c()
-    return getgenv()
-end
-
-c().Infinitestamina = false
-
-local Old
-Old = hookfunction(SprintBar.update, function(...)
-    if c().Infinitestamina then
-        return Old(function() return 1 end)
-    else
-        return Old(...)
-    end
-end)
-
-
-CheaterTab:Toggle({
-    Title = "Infinite Stamina",
-    Value = c().Infinitestamina,
-    Callback = function(state)
-        c().Infinitestamina = state
-    end
-})
 
 CheaterTab:Divider()
 CheaterTab:Section({Title="Snap PC key [ Z ]"})
