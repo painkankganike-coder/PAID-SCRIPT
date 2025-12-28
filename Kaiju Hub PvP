@@ -487,15 +487,60 @@ local HealthEnabled = CreateBool("ESPHealthEnabled")
 local HighlightEnabled = CreateBool("ESPHighlightEnabled")
 local TracerEnabled = CreateBool("ESPTracerEnabled")
 
--- Toggle ทุกฟังก์ชัน
-EspTab:Toggle({Title = "Box", Value = BoxEnabled.Value, Callback = function(state) BoxEnabled.Value = state end})
-EspTab:Toggle({Title = "Name", Value = NameEnabled.Value, Callback = function(state) NameEnabled.Value = state end})
-EspTab:Toggle({Title = "Distance", Value = DistanceEnabled.Value, Callback = function(state) DistanceEnabled.Value = state end})
-EspTab:Toggle({Title = "Health", Value = HealthEnabled.Value, Callback = function(state) HealthEnabled.Value = state end})
-EspTab:Toggle({Title = "Highlight", Value = HighlightEnabled.Value, Callback = function(state) HighlightEnabled.Value = state end})
-EspTab:Toggle({Title = "Tracer", Value = TracerEnabled.Value, Callback = function(state) TracerEnabled.Value = state end})
+EspTab:Toggle({
+    Title = "Box",
+    Value = BoxEnabled.Value,
+    Flag = "ESPBoxEnabled",
+    Callback = function(state)
+        BoxEnabled.Value = state
+    end
+})
 
--- ESP Storage
+EspTab:Toggle({
+    Title = "Name",
+    Value = NameEnabled.Value,
+    Flag = "ESPNameEnabled",
+    Callback = function(state)
+        NameEnabled.Value = state
+    end
+})
+
+EspTab:Toggle({
+    Title = "Distance",
+    Value = DistanceEnabled.Value,
+    Flag = "ESPDistanceEnabled",
+    Callback = function(state)
+        DistanceEnabled.Value = state
+    end
+})
+
+EspTab:Toggle({
+    Title = "Health",
+    Value = HealthEnabled.Value,
+    Flag = "ESPHealthEnabled",
+    Callback = function(state)
+        HealthEnabled.Value = state
+    end
+})
+
+EspTab:Toggle({
+    Title = "Highlight",
+    Value = HighlightEnabled.Value,
+    Flag = "ESPHighlightEnabled",
+    Callback = function(state)
+        HighlightEnabled.Value = state
+    end
+})
+
+EspTab:Toggle({
+    Title = "Tracer",
+    Value = TracerEnabled.Value,
+    Flag = "ESPTracerEnabled",
+    Callback = function(state)
+        TracerEnabled.Value = state
+    end
+})
+
 local espBoxes, espNames, espDistances, healthBars, highlights, tracerLines = {}, {}, {}, {}, {}, {}
 local hue = 0
 
@@ -749,6 +794,12 @@ end)
 EspTab:Divider()
 EspTab:Section({Title="Esp item:"})
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ContentProvider = game:GetService("ContentProvider")
+local LocalPlayer = Players.LocalPlayer
+
 local ItemESP_Enabled = false
 local BillboardCache = {}
 local ItemESP_UpdateConnections = {}
@@ -992,6 +1043,7 @@ end)
 EspTab:Toggle({
     Title = "Item",
     Value = ItemESP_Enabled,
+    Flag = "DroppedItemsESP",
     Callback = function(state)
         ItemESP_Enabled = state
         if state then
@@ -1014,6 +1066,10 @@ EspTab:Toggle({
         end
     end
 })
+
+local Players = game:GetService("Players")      
+local RunService = game:GetService("RunService")      
+local Workspace = game:GetService("Workspace")      
       
 local player = Players.LocalPlayer      
 local camera = Workspace.CurrentCamera      
@@ -1023,25 +1079,28 @@ local ESP_Items = {}  -- เก็บ Highlight + Drawing ของแต่ล�
 
 -- กำหนดสีตามชื่อไอเทม
 local ITEM_COLORS = {
-    ["Uzi"] = Color3.fromRGB(0, 170, 255),       -- ฟ้า
+    ["Uzi"] = Color3.fromRGB(0, 170, 255),
     ["Hunting"] = Color3.fromRGB(0, 170, 255),   
     ["Glock"] = Color3.fromRGB(0, 170, 255),    
     ["Sawnoff"] = Color3.fromRGB(0, 170, 255),  
     ["P226"] = Color3.fromRGB(0, 170, 255),     
 
-    ["C9"] = Color3.fromRGB(0, 255, 0),         -- เขียว
+    ["C9"] = Color3.fromRGB(0, 255, 0),        
     ["G3"] = Color3.fromRGB(0, 255, 0),         
 
     ["M24"] = Color3.fromRGB(180, 0, 255),      -- ม่วง
     ["Double Draco"] = Color3.fromRGB(180, 0, 255),  
+    ["Firework Launcher"] = Color3.fromRGB(180, 0, 255),     
 
-    ["Remington"] = Color3.fromRGB(255, 215, 0), -- ทอง
+    ["Remington"] = Color3.fromRGB(255, 215, 0),
     ["AK47"] = Color3.fromRGB(255, 215, 0),     
     ["MP5"] = Color3.fromRGB(255, 215, 0),     
     ["RPG"] = Color3.fromRGB(255, 215, 0)      
+    ["M16"] = Color3.fromRGB(255, 215, 0)      
+    ["Crossbow"] = Color3.fromRGB(255, 215, 0)      
 }
 
-local DEFAULT_HIGHLIGHT_COLOR = Color3.fromRGB(255, 255, 255)  -- สีม่วงสำหรับไม่ตรงรายการ
+local DEFAULT_HIGHLIGHT_COLOR = Color3.fromRGB(255, 255, 255)  
 local DEFAULT_TEXT_COLOR = Color3.fromRGB(255, 255, 255)  
 
 -- โฟลเดอร์ของตก
@@ -1116,7 +1175,81 @@ end
 
 -- เปิด ESP
 local function enableItemESP()      
-       end      
+    ItemESP_Enabled = true      
+    for _, item in pairs(droppedFolder:GetChildren()) do      
+        if item:IsA("Model") or item:IsA("Tool") or item:IsA("Folder") then      
+            task.spawn(function()      
+                task.wait(0.3)      
+                createItemESP(item)      
+            end)      
+        end      
+    end      
+end      
+
+-- ปิด ESP
+local function disableItemESP()      
+    ItemESP_Enabled = false      
+    for item, data in pairs(ESP_Items) do      
+        if data.highlight then data.highlight:Destroy() end      
+        if data.name then data.name:Remove() end      
+        if data.distance then data.distance:Remove() end      
+    end      
+    ESP_Items = {}      
+end      
+
+-- อัปเดตตำแหน่งชื่อ + ระยะทางทุกเฟรม      
+RunService.Heartbeat:Connect(function()      
+    if not ItemESP_Enabled then return end      
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end      
+    local rootPos = player.Character.HumanoidRootPart.Position      
+      
+    for item, data in pairs(ESP_Items) do      
+        if item and item.Parent and data.handle and data.handle.Parent then      
+            local worldPos = data.handle.Position + Vector3.new(0, 2, 0)      
+            local screenPos, onScreen = camera:WorldToViewportPoint(worldPos)      
+      
+            if onScreen then      
+                local screen2D = Vector2.new(screenPos.X, screenPos.Y)      
+                local distance = math.floor((rootPos - data.handle.Position).Magnitude)      
+      
+                data.name.Position = screen2D      
+                data.name.Color = data.color  -- อัพเดตสีตามชื่อ      
+                data.name.Visible = true      
+      
+                data.distance.Position = screen2D + Vector2.new(0, 18)      
+                data.distance.Text = distance .. "m"      
+                data.distance.Color = DEFAULT_TEXT_COLOR      
+                data.distance.Visible = true      
+            else      
+                data.name.Visible = false      
+                data.distance.Visible = false      
+            end      
+        else      
+            -- ลบถ้าไอเทมหาย      
+            if data.highlight then data.highlight:Destroy() end      
+            if data.name then data.name:Remove() end      
+            if data.distance then data.distance:Remove() end      
+            ESP_Items[item] = nil      
+        end      
+    end      
+end)      
+
+-- เมื่อมีของตกใหม่      
+droppedFolder.ChildAdded:Connect(function(item)      
+    task.wait(0.5)      
+    createItemESP(item)      
+end)      
+
+EspTab:Toggle({      
+    Title = "Dropped Items",      
+    Value = ItemESP_Enabled,      
+    Flag = "DroppedItemsESP",  
+    Callback = function(state)      
+        if state then      
+            enableItemESP()      
+        else      
+            disableItemESP()      
+        end      
     end      
 })
 
@@ -1217,6 +1350,7 @@ end)
 EspTab:Toggle({
     Title = "Money",
     Value = MoneyESP_Enabled,
+    Flag = "MoneyESP", 
     Callback = function(state)
         if state then enableMoneyESP() else disableMoneyESP() end
     end
