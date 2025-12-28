@@ -1676,6 +1676,8 @@ local JumpEnabled = false
 local HideNameEnabled = false
 local AntiLookEnabled = false
 local AntiRagdollEnabled = false
+local AutoSprintEnabled = false
+
 
 local bankButton = CheaterTab:Button({
     Title = "🏦 Bank Balance :",
@@ -2036,104 +2038,98 @@ CheaterTab:Toggle({
     end  
 })
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local AutoSprintEnabled = false
-local SprintLoop = nil
-local OriginalSprintUpdate = nil
-
-local Net = {}
-function Net.send(...)
-    pcall(function()
-        ReplicatedStorage.Remotes.Send:FireServer(...)
-    end)
-end
-
-local function EnableInfiniteStamina()
-    local SprintModule
-    local ok = pcall(function()
-        SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
-    end)
-    if not ok or not SprintModule then return end
-
-    local consume_stamina = SprintModule.consume_stamina
-    local SprintBar
-
-    for _, v in ipairs(debug.getupvalues(consume_stamina)) do
-        if type(v) == "table" and v.sprint_bar then
-            SprintBar = v.sprint_bar
-            break
-        end
-    end
-
-    if not SprintBar or not SprintBar.update then return end
-
-    OriginalSprintUpdate = SprintBar.update
-    SprintBar.update = function() return 1 end
-
-    SprintLoop = task.spawn(function()
-        while AutoSprintEnabled do
-            pcall(function()
-                Net.send("set_sprinting_1", true)
-                task.wait(0.4)
-                Net.send("set_sprinting_1", false)
-            end)
-            task.wait(0.15)
-        end
-        pcall(function()
-            Net.send("set_sprinting_1", false)
-        end)
-    end)
-end
-
-local function DisableInfiniteStamina()
-    AutoSprintEnabled = false
-    if SprintLoop then
-        task.cancel(SprintLoop)
-        SprintLoop = nil
-    end
-
-    local SprintModule
-    pcall(function()
-        SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
-    end)
-
-    if SprintModule and OriginalSprintUpdate then
-        local consume_stamina = SprintModule.consume_stamina
-        for _, v in ipairs(debug.getupvalues(consume_stamina)) do
-            if type(v) == "table" and v.sprint_bar then
-                v.sprint_bar.update = OriginalSprintUpdate
-                break
-            end
-        end
-    end
-    OriginalSprintUpdate = nil
-end
-
 CheaterTab:Toggle({
     Title = "Infinite Stamina",
     Default = false,
     Callback = function(state)
         AutoSprintEnabled = state
+
         if state then
-            EnableInfiniteStamina()
+            local SprintModule
+            local ok = pcall(function()
+                SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
+            end)
+            if not ok or not SprintModule then return end
+
+            local consume_stamina = SprintModule.consume_stamina
+            local SprintBar
+
+            pcall(function()
+                local ups = debug.getupvalues(consume_stamina)
+                SprintBar = ups[2] and ups[2].sprint_bar
+            end)
+
+            if not SprintBar or not SprintBar.update then return end
+
+            getgenv().OriginalSprintUpdate = SprintBar.update
+
+            -- Lock stamina full
+            SprintBar.update = function()
+                return 1
+            end
+
+            -- Auto Sprint Loop
+            getgenv().AutoSprintLoop = task.spawn(function()
+                while AutoSprintEnabled do
+                    pcall(function()
+                        if Net then
+                            Net.send("set_sprinting_1", true)
+                            task.wait(0.4)
+                            Net.send("set_sprinting_1", false)
+                        end
+                    end)
+                    task.wait(0.15)
+                end
+                pcall(function()
+                    if Net then
+                        Net.send("set_sprinting_1", false)
+                    end
+                end)
+            end)
+
+            WindUI:Notify({
+                Title = "INF STAMINA",
+                Description = "เปิดใช้งานแล้ว",
+                Duration = 3
+            })
         else
-            DisableInfiniteStamina()
+            if getgenv().AutoSprintLoop then
+                task.cancel(getgenv().AutoSprintLoop)
+                getgenv().AutoSprintLoop = nil
+            end
+
+            pcall(function()
+                if Net then
+                    Net.send("set_sprinting_1", false)
+                end
+            end)
+
+            local SprintModule
+            pcall(function()
+                SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
+            end)
+
+            if SprintModule and getgenv().OriginalSprintUpdate then
+                pcall(function()
+                    local consume_stamina = SprintModule.consume_stamina
+                    local ups = debug.getupvalues(consume_stamina)
+                    local SprintBar = ups[2] and ups[2].sprint_bar
+                    if SprintBar then
+                        SprintBar.update = getgenv().OriginalSprintUpdate
+                    end
+                end)
+            end
+
+            getgenv().OriginalSprintUpdate = nil
+
+            WindUI:Notify({
+                Title = "INF STAMINA",
+                Description = "ปิดแล้ว",
+                Duration = 3
+            })
         end
     end
 })
-
-local success, kickF = pcall(function()
-    return getrenv().kick or getrenv().Kick
-end)
-
-if success and kickF then
-    hookfunction(kickF, function(p12, p13, p14, p15, ...)
-        return p12(p13, p14, p15, ...)
-    end)
-end
 
 CheaterTab:Divider()
 CheaterTab:Section({Title="att :"})
