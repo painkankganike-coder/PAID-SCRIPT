@@ -1445,8 +1445,10 @@ ServerTab:Button({
     end
 })
 
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
 local Automatic = false
-local FireRateEnabled = false
 local FireRate = 1500
 local toolCache = {}
 
@@ -1457,8 +1459,6 @@ local function matchesTarget(name, target)
 end
 
 local function applyAttributesSmart(gun)
-    if not FireRateEnabled then return end -- ตรวจสอบว่าเปิด Fire Rate หรือไม่
-
     local prev = toolCache[gun]
     if prev and prev.FireRate == FireRate then return end
 
@@ -1477,8 +1477,6 @@ local function applyAttributesSmart(gun)
 end
 
 local function updateAllGuns()
-    if not FireRateEnabled then return end -- ตรวจสอบว่าเปิด Fire Rate หรือไม่
-
     if player.Character then
         for _, tool in ipairs(player.Character:GetChildren()) do
             if tool:IsA("Tool") then
@@ -1514,7 +1512,6 @@ end)
 
 WeaponTab:Slider({
     Title = "Fire Rate",
-    Flag = "FireRateSlider",
     Value = { Min = 100, Max = 2000, Default = FireRate },
     Step = 1,
     Callback = function(value)
@@ -1523,24 +1520,8 @@ WeaponTab:Slider({
     end
 })
 
-WeaponTab:Divider()
-WeaponTab:Section({Title="Use Apply guns:"})
-
-WeaponTab:Toggle({
-    Title = "Apply Fire Rate",
-    Flag = "FireRateToggle",
-    Default = false,
-    Callback = function(state)
-        FireRateEnabled = state
-        if FireRateEnabled then
-            updateAllGuns()
-        end
-    end
-})
-
 WeaponTab:Toggle({
     Title = "Automatic",
-    Flag = "AutomaticToggle",
     Default = false,
     Callback = function(state)
         Automatic = state
