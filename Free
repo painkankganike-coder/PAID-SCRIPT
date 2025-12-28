@@ -1158,7 +1158,7 @@ ServerTab:Button({
 
 local FireRateValue = Instance.new("NumberValue")
 FireRateValue.Name = "FireRateValue"
-FireRateValue.Value = 1500
+FireRateValue.Value = 700
 FireRateValue.Parent = LocalPlayer
 
 local FireRateEnabled = false
@@ -1577,7 +1577,6 @@ LocalPlayer.CharacterAdded:Connect(function(char)
             end
         end)
         
-        -- ลบที่มีอยู่แล้วใน Character
         RemoveBillboardGui()
     end
 end)
@@ -1891,106 +1890,3 @@ CheaterTab:Toggle({
         c().Infinitestamina = state
     end
 })
-
-CheaterTab:Divider()
-CheaterTab:Section({Title="Snap PC key [ Z ]"})
-
-local JumpEnabled = false
-local SnapHeightOffset = -7
-local SnapDirection = "Down"
-local SnapDuration = 0.1
-local SnapBlockDuration = 5
-
-local isRunning = false
-
-local function SnapQuick()
-    if isRunning then return end
-    isRunning = true
-
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum then isRunning=false return end
-
-    local blocks = {}
-    for _, part in ipairs(char:GetChildren()) do
-        if part:IsA("BasePart") then
-            local blk = Instance.new("Part")
-            blk.Size = part.Size
-            blk.CFrame = part.CFrame
-            blk.Anchored = true
-            blk.CanCollide = false
-            blk.Material = Enum.Material.Neon
-            blk.Transparency = 0.5
-            blk.Color = Color3.fromRGB(0,170,255) -- สีฟ้า
-            blk.Parent = workspace
-            table.insert(blocks, blk)
-        end
-    end
-
-    -- ตั้งเวลาให้ลบบล็อกหลัง 5 วินาที
-    task.spawn(function()
-        task.wait(SnapBlockDuration)
-        for _, blk in ipairs(blocks) do
-            if blk and blk.Parent then blk:Destroy() end
-        end
-    end)
-
-    hum.Sit = true
-    local origY = hrp.Position.Y
-    local offset = math.abs(SnapHeightOffset)
-    if SnapDirection == "Down" then offset = -offset end
-
-    local conn
-    conn = RunService.RenderStepped:Connect(function()
-        if hrp and hrp.Parent then
-            hrp.CFrame = hrp.CFrame:Lerp(CFrame.new(hrp.Position.X, origY+offset, hrp.Position.Z),0.8)
-
-            for i, part in ipairs(char:GetChildren()) do
-                if part:IsA("BasePart") and blocks[i] then
-                    local blk = blocks[i]
-                    if blk and blk.Parent then
-                        blk.CFrame = part.CFrame
-                    end
-                end
-            end
-        end
-    end)
-
-    task.wait(SnapDuration)
-    if conn then conn:Disconnect() conn=nil end
-    hum.Sit = false
-    isRunning=false
-end
-
-CheaterTab:Button({
-    Title="Snap Click",
-    Locked=false,
-    Callback=function() SnapQuick() end
-})
-
--- Slider Snap Depth
-CheaterTab:Slider({
-    Title="Snap Depth",
-    Step=1,
-    Value={Min=1,Max=50,Default=math.abs(SnapHeightOffset)},
-    Callback=function(val)
-        SnapHeightOffset=(SnapDirection=="Down" and -1 or 1)*val
-    end
-})
-
--- Dropdown Snap Direction
-CheaterTab:Dropdown({
-    Title="Snap Direction",
-    Values={"Down","Up"},
-    Value=SnapDirection,
-    Callback=function(opt)
-        SnapDirection=opt
-        SnapHeightOffset=(opt=="Down" and -1 or 1)*math.abs(SnapHeightOffset)
-    end
-})
-
-UserInputService.InputBegan:Connect(function(input,gpe)
-    if gpe then return end
-    if input.KeyCode==Enum.KeyCode.Z then SnapQuick() end
-end)
