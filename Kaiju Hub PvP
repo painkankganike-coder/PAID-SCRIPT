@@ -2036,9 +2036,21 @@ CheaterTab:Toggle({
     end  
 })
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local AutoSprintEnabled = false
 
-PlayerTab:Toggle({
+local Net = {}
+function Net.send(...)
+    local success, err = pcall(function()
+        ReplicatedStorage.Remotes.Send:FireServer(...)
+    end)
+    if not success then warn(err) end
+end
+
+CheaterTab:Toggle({
     Title = "Infinite Stamina",
     Default = false,
     Callback = function(state)
@@ -2054,10 +2066,12 @@ PlayerTab:Toggle({
             local consume_stamina = SprintModule.consume_stamina
             local SprintBar
 
-            pcall(function()
-                local ups = debug.getupvalues(consume_stamina)
-                SprintBar = ups[2] and ups[2].sprint_bar
-            end)
+            for i, v in ipairs(debug.getupvalues(consume_stamina)) do
+                if type(v) == "table" and v.sprint_bar then
+                    SprintBar = v.sprint_bar
+                    break
+                end
+            end
 
             if not SprintBar or not SprintBar.update then return end
 
@@ -2070,26 +2084,16 @@ PlayerTab:Toggle({
             getgenv().AutoSprintLoop = task.spawn(function()
                 while AutoSprintEnabled do
                     pcall(function()
-                        if Net then
-                            Net.send("set_sprinting_1", true)
-                            task.wait(0.4)
-                            Net.send("set_sprinting_1", false)
-                        end
+                        Net.send("set_sprinting_1", true)
+                        task.wait(0.4)
+                        Net.send("set_sprinting_1", false)
                     end)
                     task.wait(0.15)
                 end
                 pcall(function()
-                    if Net then
-                        Net.send("set_sprinting_1", false)
-                    end
+                    Net.send("set_sprinting_1", false)
                 end)
             end)
-
-            WindUI:Notify({
-                Title = "INF STAMINA",
-                Description = "เปิดใช้งานแล้ว",
-                Duration = 3
-            })
         else
             if getgenv().AutoSprintLoop then
                 task.cancel(getgenv().AutoSprintLoop)
@@ -2097,9 +2101,7 @@ PlayerTab:Toggle({
             end
 
             pcall(function()
-                if Net then
-                    Net.send("set_sprinting_1", false)
-                end
+                Net.send("set_sprinting_1", false)
             end)
 
             local SprintModule
@@ -2110,35 +2112,29 @@ PlayerTab:Toggle({
             if SprintModule and getgenv().OriginalSprintUpdate then
                 pcall(function()
                     local consume_stamina = SprintModule.consume_stamina
-                    local ups = debug.getupvalues(consume_stamina)
-                    local SprintBar = ups[2] and ups[2].sprint_bar
-                    if SprintBar then
-                        SprintBar.update = getgenv().OriginalSprintUpdate
+                    for i, v in ipairs(debug.getupvalues(consume_stamina)) do
+                        if type(v) == "table" and v.sprint_bar then
+                            v.sprint_bar.update = getgenv().OriginalSprintUpdate
+                            break
+                        end
                     end
                 end)
             end
 
             getgenv().OriginalSprintUpdate = nil
-
-            WindUI:Notify({
-                Title = "INF STAMINA",
-                Description = "ปิดแล้ว",
-                Duration = 3
-            })
         end
     end
+})
+
+local success, kickF = pcall(function()
+    return getrenv().kick or getrenv().Kick
 end)
 
-pcall(function()
-    if kickF then
-        hookfunction(kickF, function(p12, p13, p14, p15, ...)
-            return p12(p13, p14, p15, ...)
-        end)
-        print("✅ Kick function hooked successfully")
-    else
-        warn("⚠️ kickF not found")
-    end
-end)
+if success and kickF then
+    hookfunction(kickF, function(p12, p13, p14, p15, ...)
+        return p12(p13, p14, p15, ...)
+    end)
+end
 
 CheaterTab:Divider()
 CheaterTab:Section({Title="att :"})
