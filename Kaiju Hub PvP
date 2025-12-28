@@ -1095,9 +1095,9 @@ local ITEM_COLORS = {
     ["Remington"] = Color3.fromRGB(255, 215, 0),
     ["AK47"] = Color3.fromRGB(255, 215, 0),     
     ["MP5"] = Color3.fromRGB(255, 215, 0),     
-    ["RPG"] = Color3.fromRGB(255, 215, 0)      
-    ["M16"] = Color3.fromRGB(255, 215, 0)      
-    ["Crossbow"] = Color3.fromRGB(255, 215, 0)      
+    ["RPG"] = Color3.fromRGB(255, 215, 0),      
+    ["M16"] = Color3.fromRGB(255, 215, 0),      
+    ["Crossbow"] = Color3.fromRGB(255, 215, 0),      
 }
 
 local DEFAULT_HIGHLIGHT_COLOR = Color3.fromRGB(255, 255, 255)  
