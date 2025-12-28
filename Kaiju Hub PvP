@@ -1510,24 +1510,32 @@ player.Backpack.ChildAdded:Connect(function(child)
     end
 end)
 
-WeaponTab:Slider({
-    Title = "Fire Rate",
-    Value = { Min = 100, Max = 2000, Default = FireRate },
-    Step = 1,
-    Callback = function(value)
-        FireRate = tonumber(value)
-        updateAllGuns()
+WeaponTab:Toggle({
+    Title = "Automatic",
+    Flag = "AutomaticToggle",
+    Value = Automatic,
+    Callback = function(state)
+        pcall(function()
+            Automatic = state
+            if Automatic then
+                updateAllGuns()
+            end
+        end)
     end
 })
 
-WeaponTab:Toggle({
-    Title = "Automatic",
-    Default = false,
-    Callback = function(state)
-        Automatic = state
-        if Automatic then
-            updateAllGuns()
-        end
+WeaponTab:Slider({
+    Title = "Fire Rate",
+    Flag = "FireRateSlider",
+    Value = { Min = 100, Max = 2000, Default = FireRate },
+    Step = 1,
+    Callback = function(value)
+        pcall(function()
+            FireRate = tonumber(value)
+            if Automatic then
+                updateAllGuns()
+            end
+        end)
     end
 })
 
@@ -1584,9 +1592,12 @@ WeaponTab:Toggle({
     Flag = "NoRecoilEnabled",
     Value = getgenv().NoRecoilEnabled,
     Callback = function(state)
-        ToggleNoRecoil(state)
+        pcall(function()
+            ToggleNoRecoil(state)
+        end)
     end
 })
+
 -- Hit Aura
 WeaponTab:Section({Title="Auto Hit :"})
 getgenv().HitAuraEnabled = false
@@ -1685,7 +1696,9 @@ WeaponTab:Toggle({
     Flag = "HitAuraEnabled",
     Value = getgenv().HitAuraEnabled,
     Callback = function(state)
-        ToggleHitAura(state)
+        pcall(function()
+            ToggleHitAura(state)
+        end)
     end
 })
 
