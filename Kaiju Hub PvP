@@ -1790,11 +1790,10 @@ local function RemoveJump()
     end
 end
 
-local JumpHeightSlider = CheaterTab:Slider({
+CheaterTab:Slider({
     Title = "Jump Height",
-    Flag = "JumpHeight",
-    Value = {Min = 10, Max = 200, Default = 20},
     Step = 1,
+    Value = {Min = 10, Max = 200, Default = 20}, 
     Callback = function(value)
         JumpValue = value
         if JumpEnabled then
@@ -1803,8 +1802,9 @@ local JumpHeightSlider = CheaterTab:Slider({
     end
 })
 
-CheaterTab:Toggle({
+local JumpToggle = CheaterTab:Toggle({
     Title = "Jump",
+    Flag = "JumpEnabled",
     Value = JumpEnabled,
     Callback = function(state)
         JumpEnabled = state
