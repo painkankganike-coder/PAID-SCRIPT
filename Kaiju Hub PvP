@@ -2457,13 +2457,11 @@ CheaterTab:Button({
     Callback=function() SnapQuick() end
 })
 
-local SnapDepthSlider = CheaterTab:Slider({
-    Title = "Snap Depth",
-    Flag = "SnapHeightOffset",
-    Value = {Min = 1, Max = 50, Default = math.abs(SnapHeightOffset)},
-    Step = 1,
-    Callback = function(val)
-        SnapHeightOffset = (SnapDirection == "Down" and -1 or 1) * val
+CheaterTab:Slider({
+    Title="Snap Depth",
+    Step=1 Value={Min=1,Max=50,Default=math.abs(SnapHeightOffset)},
+    Callback=function(val)
+        SnapHeightOffset=(SnapDirection=="Down" and -1 or 1)*val
     end
 })
 
