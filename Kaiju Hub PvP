@@ -1253,64 +1253,86 @@ EspTab:Toggle({
     end      
 })
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 
--- โฟลเดอร์ของของตก
+local ESP_Money = {}  
+local MoneyESP_Enabled = false
+
+-- สีเขียวสดใส
+local HIGHLIGHT_COLOR = Color3.fromRGB(0, 255, 0)
+local TEXT_COLOR = Color3.fromRGB(0, 255, 0)
+
+-- โฟลเดอร์ของตก
 local droppedFolder = Workspace:FindFirstChild("DroppedItem") or Workspace:FindFirstChild("DroppedItems")
 if not droppedFolder then
     warn("ไม่พบโฟลเดอร์ DroppedItem / DroppedItems")
     return
 end
 
-local MoneyESP_Enabled = false
-local ESP_Money = {}
-
-local MONEY_HIGHLIGHT_COLOR = Color3.fromRGB(0,255,0)
-local MONEY_NAME_COLOR = Color3.fromRGB(0,255,0)
-
+-- ฟังก์ชันสร้าง ESP สำหรับ Money 1 ชิ้น
 local function createMoneyESP(item)
-    if not MoneyESP_Enabled then return end
     if ESP_Money[item] then return end
     if item.Name ~= "Money" then return end
-    local handle = item:FindFirstChild("Handle") or item.PrimaryPart or item:FindFirstChildOfClass("Part")
-    if not handle then return end
 
+    local mainPart = item:FindFirstChild("Handle") or item.PrimaryPart or item:FindFirstChildOfClass("Part")
+    if not mainPart then return end
+
+    -- Highlight
     local highlight = Instance.new("Highlight")
-    highlight.FillColor = MONEY_HIGHLIGHT_COLOR
-    highlight.OutlineColor = MONEY_HIGHLIGHT_COLOR
+    highlight.FillColor = HIGHLIGHT_COLOR
+    highlight.OutlineColor = HIGHLIGHT_COLOR
     highlight.FillTransparency = 0.3
     highlight.OutlineTransparency = 0
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = item
 
+    -- ชื่อ Money
     local nameText = Drawing.new("Text")
-    nameText.Size = 7
-    nameText.Color = MONEY_NAME_COLOR
+    nameText.Size = 16
+    nameText.Color = TEXT_COLOR
     nameText.Center = true
     nameText.Outline = true
     nameText.Font = 2
     nameText.Visible = true
     nameText.Text = item.Name
 
-    ESP_Money[item] = {highlight = highlight, name = nameText, handle = handle}
+    ESP_Money[item] = {
+        highlight = highlight,
+        name = nameText,
+        mainPart = mainPart
+    }
 
+    -- ลบเมื่อ Money หาย
     item.AncestryChanged:Connect(function()
-        if not item.Parent and ESP_Money[item] then
-            highlight:Destroy()
-            nameText:Remove()
-            ESP_Money[item] = nil
+        if not item.Parent then
+            if ESP_Money[item] then
+                highlight:Destroy()
+                nameText:Remove()
+                ESP_Money[item] = nil
+            end
         end
     end)
 end
 
+-- ฟังก์ชันเปิด Money ESP
 local function enableMoneyESP()
     MoneyESP_Enabled = true
     for _, item in pairs(droppedFolder:GetChildren()) do
-        createMoneyESP(item)
+        if item.Name == "Money" then
+            task.spawn(function()
+                task.wait(0.3)
+                createMoneyESP(item)
+            end)
+        end
     end
 end
 
+-- ฟังก์ชันปิด Money ESP
 local function disableMoneyESP()
     MoneyESP_Enabled = false
     for item, data in pairs(ESP_Money) do
@@ -1320,14 +1342,17 @@ local function disableMoneyESP()
     ESP_Money = {}
 end
 
+-- อัปเดตตำแหน่งชื่อทุกเฟรม
 RunService.Heartbeat:Connect(function()
     if not MoneyESP_Enabled then return end
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+    local rootPos = player.Character.HumanoidRootPart.Position
 
     for item, data in pairs(ESP_Money) do
-        if item and item.Parent and data.handle and data.handle.Parent then
-            local worldPos = data.handle.Position + Vector3.new(0,2,0)
+        if item and item.Parent and data.mainPart and data.mainPart.Parent then
+            local worldPos = data.mainPart.Position + Vector3.new(0, 2, 0)
             local screenPos, onScreen = camera:WorldToViewportPoint(worldPos)
+
             if onScreen then
                 data.name.Position = Vector2.new(screenPos.X, screenPos.Y)
                 data.name.Visible = true
@@ -1342,17 +1367,26 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- เมื่อมี Money ใหม่เข้ามา
 droppedFolder.ChildAdded:Connect(function(item)
-    task.wait(0.5)
-    createMoneyESP(item)
+    if not MoneyESP_Enabled then return end
+    if item.Name == "Money" then
+        task.wait(0.5)
+        createMoneyESP(item)
+    end
 end)
 
+local function addMoneyESP_Toggle(EspTab)
 EspTab:Toggle({
     Title = "Money",
     Value = MoneyESP_Enabled,
     Flag = "MoneyESP", 
     Callback = function(state)
-        if state then enableMoneyESP() else disableMoneyESP() end
+        if state then
+            enableMoneyESP()
+        else
+            disableMoneyESP()
+        end
     end
 })
 
