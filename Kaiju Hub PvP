@@ -1674,7 +1674,7 @@ local Camera = workspace.CurrentCamera
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
---// Claim All Quests
+-- ฟังก์ชัน NetGet
 local CounterTable
 pcall(function()
     for _, Obj in ipairs(getgc(true)) do
@@ -1700,37 +1700,78 @@ local function NetGet(...)
     return result
 end
 
+-- ฟังก์ชันรับเควสทั้งหมด
 local function ClaimAllQuests()
-    local questFrame
-    local success = pcall(function()
-        questFrame = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Quests"):WaitForChild("QuestsHolder"):WaitForChild("QuestsScrollingFrame")
-    end)
-    if not success or not questFrame then
-        warn("❌ Quest GUI ไม่พบ!")
+    local gui = LocalPlayer:FindFirstChild("PlayerGui")
+    if not gui then
+        warn("❌ PlayerGui ไม่พบ")
         return 0
     end
+
+    local quests = gui:FindFirstChild("Quests")
+    if not quests then
+        warn("❌ Quests GUI ไม่พบ")
+        return 0
+    end
+
+    local holder = quests:FindFirstChild("QuestsHolder")
+    if not holder then
+        warn("❌ QuestsHolder ไม่พบ")
+        return 0
+    end
+
+    local scrollFrame = holder:FindFirstChild("QuestsScrollingFrame")
+    if not scrollFrame then
+        warn("❌ QuestsScrollingFrame ไม่พบ")
+        return 0
+    end
+
     local claimed = 0
-    for _, child in ipairs(questFrame:GetChildren()) do
-        if (child:IsA("Frame") or child:IsA("TextButton") or child:IsA("ImageButton")) and child.Name ~= "" then
-            pcall(function()
-                NetGet("claim_quest", child.Name)
-            end)
-            claimed = claimed + 1
-            task.wait(0.2)
+    for _, child in ipairs(scrollFrame:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("TextButton") or child:IsA("ImageButton") then
+            if child.Name and child.Name ~= "" then
+                local success, _ = pcall(function()
+                    NetGet("claim_quest", child.Name)
+                end)
+                if success then
+                    claimed = claimed + 1
+                end
+                task.wait(0.1) -- หน่วงเล็กน้อย
+            end
         end
     end
+
+    if claimed == 0 then
+        print("ℹ️ ไม่มี Quest ให้ Claim")
+    else
+        print("✅ Claimed "..claimed.." Quests!")
+    end
+
     return claimed
 end
 
+-- เพิ่มปุ่มใน UI
 MiscTab:Button({
     Title = "Claim All Quests",
     Callback = function()
         local claimed = ClaimAllQuests()
-        print("✅ Claimed "..claimed.." Quests!")
+        if claimed > 0 then
+            WindUI:Notify({
+                Title = "Claim Quests",
+                Content = "✅ Claimed "..claimed.." Quests!",
+                Icon = "check"
+            })
+        else
+            WindUI:Notify({
+                Title = "Claim Quests",
+                Content = "ℹ️ ไม่มี Quest ให้ Claim",
+                Icon = "info"
+            })
+        end
     end
 })
 
---// Boost FPS
+
 local function KaijuHub_BoostFPS()
     local lighting = game:GetService("Lighting")
     local workspaceRef = game:GetService("Workspace")
