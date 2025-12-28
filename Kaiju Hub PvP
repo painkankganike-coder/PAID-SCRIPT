@@ -1747,8 +1747,9 @@ CheaterTab:Slider({
     end
 })
 
-CheaterTab:Toggle({
+local SpeedToggle = CheaterTab:Toggle({
     Title = "Speed",
+    Flag = "SpeedEnabled",
     Value = SpeedEnabled,
     Callback = function(state)
         SpeedEnabled = state
@@ -1789,10 +1790,11 @@ local function RemoveJump()
     end
 end
 
-CheaterTab:Slider({
+local JumpHeightSlider = CheaterTab:Slider({
     Title = "Jump Height",
+    Flag = "JumpHeight",
+    Value = {Min = 10, Max = 200, Default = 20},
     Step = 1,
-    Value = {Min = 10, Max = 200, Default = 20}, 
     Callback = function(value)
         JumpValue = value
         if JumpEnabled then
@@ -1946,12 +1948,17 @@ local function StopAntiLook()
     end
 end
 
-CheaterTab:Toggle({
+local AntiLookToggle = CheaterTab:Toggle({
     Title = "Anti Lock",
+    Flag = "AntiLookEnabled",
     Value = AntiLookEnabled,
     Callback = function(state)
         AntiLookEnabled = state
-        if state then PlayAntiLook() else StopAntiLook() end
+        if state then
+            PlayAntiLook()
+        else
+            StopAntiLook()
+        end
     end
 })
   
@@ -2036,14 +2043,14 @@ end)
 -- Loop ทุกเฟรม  
 RunService.Heartbeat:Connect(CheckAndPickup)  
   
--- WindUI Toggle  
-CheaterTab:Toggle({  
-    Title = "Pickup Items",  
-    Value = PickupEnabled,  
-    Callback = function(state)  
-        PickupEnabled = state  
-        print("🧲 Auto Pickup Items:", state and "ON" or "OFF")  
-    end  
+local PickupToggle = CheaterTab:Toggle({
+    Title = "Pickup Items",
+    Flag = "PickupEnabled",
+    Value = PickupEnabled,
+    Callback = function(state)
+        PickupEnabled = state
+        print("🧲 Auto Pickup Items:", state and "ON" or "OFF")
+    end
 })
 
 -- Infinite Stamina Toggle
@@ -2177,9 +2184,9 @@ end)
 CheaterTab:Divider()
 CheaterTab:Section({Title="att :"})
 
--- Toggle Hide Name
-CheaterTab:Toggle({
+local HideNameToggle = CheaterTab:Toggle({
     Title = "Hide Name",
+    Flag = "HideNameEnabled",
     Value = HideNameEnabled,
     Callback = function(state)
         HideNameEnabled = state
@@ -2290,9 +2297,9 @@ RunService.RenderStepped:Connect(function()
     AntiRagdoll()
 end)
 
--- Toggle ปุ่ม UI
-CheaterTab:Toggle({
+local AntiKillToggle = CheaterTab:Toggle({
     Title = "Anti Kill",
+    Flag = "UndergroundAutoEnabled",
     Value = UndergroundAutoEnabled,
     Callback = function(state)
         UndergroundAutoEnabled = state
@@ -2351,13 +2358,13 @@ local function startAntiRagdoll()
     end)
 end
 
--- WindUI Toggle
-CheaterTab:Toggle({
+local AntiRagdollToggle = CheaterTab:Toggle({
     Title = "Anti Ragdoll",
+    Flag = "AntiRagdollEnabled",
     Value = AntiRagdollEnabled,
     Callback = function(state)
         AntiRagdollEnabled = state
-        if AntiRagdollEnabled then
+        if state then
             startAntiRagdoll()
             print("✅ Anti Ragdoll ON")
         else
@@ -2365,7 +2372,6 @@ CheaterTab:Toggle({
         end
     end
 })
-
 -- Auto start เมื่อ respawn
 player.CharacterAdded:Connect(function()
     if AntiRagdollEnabled then
@@ -2451,13 +2457,13 @@ CheaterTab:Button({
     Callback=function() SnapQuick() end
 })
 
--- Slider Snap Depth
-CheaterTab:Slider({
-    Title="Snap Depth",
-    Step=1,
-    Value={Min=1,Max=50,Default=math.abs(SnapHeightOffset)},
-    Callback=function(val)
-        SnapHeightOffset=(SnapDirection=="Down" and -1 or 1)*val
+local SnapDepthSlider = CheaterTab:Slider({
+    Title = "Snap Depth",
+    Flag = "SnapHeightOffset",
+    Value = {Min = 1, Max = 50, Default = math.abs(SnapHeightOffset)},
+    Step = 1,
+    Callback = function(val)
+        SnapHeightOffset = (SnapDirection == "Down" and -1 or 1) * val
     end
 })
 
