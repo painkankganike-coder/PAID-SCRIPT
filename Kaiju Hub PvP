@@ -1,25 +1,4 @@
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-
-local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
-    game:GetService("Players"),
-    game:GetService("RunService"),
-    workspace.CurrentCamera,
-    game.Players.LocalPlayer,
-    game:GetService("ReplicatedStorage")
-
-local Players           = game:GetService("Players")
-local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
-game:GetService("Players"),
-game:GetService("RunService"),
-workspace.CurrentCamera,
-game.Players.LocalPlayer,
-game:GetService("ReplicatedStorage")
-
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContentProvider = game:GetService("ContentProvider")
@@ -43,7 +22,19 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
+    game:GetService("Players"),
+    game:GetService("RunService"),
+    workspace.CurrentCamera,
+    game.Players.LocalPlayer,
+    game:GetService("ReplicatedStorage")
 
 local Window = WindUI:CreateWindow({
     Title = "☃️ Kaiju Hub | PVP ",
