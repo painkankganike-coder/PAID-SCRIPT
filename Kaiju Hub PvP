@@ -4,7 +4,6 @@ local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
     game:GetService("Players"),
     game:GetService("RunService"),
@@ -12,8 +11,41 @@ local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
     game.Players.LocalPlayer,
     game:GetService("ReplicatedStorage")
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ContentProvider = game:GetService("ContentProvider")
+local LocalPlayer = Players.LocalPlayer
+
+local Players = game:GetService("Players")      
+local RunService = game:GetService("RunService")      
+local Workspace = game:GetService("Workspace")      
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Data_upvr = require(ReplicatedStorage.Modules.Core.Data) 
+
+local Players = game:GetService("Players")  
+local RunService = game:GetService("RunService")  
+local ReplicatedStorage = game:GetService("ReplicatedStorage")  
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
 local Window = WindUI:CreateWindow({
-    Title = "☃️ Kaiju Hub | Pvp",
+    Title = "☃️ Kaiju Hub | PVP ",
     Icon = "layout-list", 
     Author = "❄️ My Kaiju |  BlockSpin | I love You :D !",
     Folder = "MyKaijuHub",
@@ -27,9 +59,9 @@ local Window = WindUI:CreateWindow({
 })
 
 Window:Tag({
-    Title = "PAID",
+    Title = "plus ultra",
     Icon = "lock-keyhole",
-    Color = Color3.fromHex("#818282"),
+    Color = Color3.fromHex("#F7D30A"),
     Radius = 13,
 })
 
@@ -715,12 +747,6 @@ end)
 EspTab:Divider()
 EspTab:Section({Title="Esp item:"})
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ContentProvider = game:GetService("ContentProvider")
-local LocalPlayer = Players.LocalPlayer
-
 local ItemESP_Enabled = false
 local BillboardCache = {}
 local ItemESP_UpdateConnections = {}
@@ -986,10 +1012,6 @@ EspTab:Toggle({
         end
     end
 })
-
-local Players = game:GetService("Players")      
-local RunService = game:GetService("RunService")      
-local Workspace = game:GetService("Workspace")      
       
 local player = Players.LocalPlayer      
 local camera = Workspace.CurrentCamera      
@@ -1017,7 +1039,7 @@ local ITEM_COLORS = {
     ["RPG"] = Color3.fromRGB(255, 215, 0)      
 }
 
-local DEFAULT_HIGHLIGHT_COLOR = Color3.fromRGB(200, 0, 255)  -- สีม่วงสำหรับไม่ตรงรายการ
+local DEFAULT_HIGHLIGHT_COLOR = Color3.fromRGB(255, 255, 255)  -- สีม่วงสำหรับไม่ตรงรายการ
 local DEFAULT_TEXT_COLOR = Color3.fromRGB(255, 255, 255)  
 
 -- โฟลเดอร์ของตก
@@ -1170,11 +1192,6 @@ EspTab:Toggle({
     end      
 })
 
--- Services
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 
@@ -1276,12 +1293,6 @@ EspTab:Toggle({
         if state then enableMoneyESP() else disableMoneyESP() end
     end
 })
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
 
 local placeId = game.PlaceId
 local jobInput = ""
@@ -1667,14 +1678,6 @@ WeaponTab:Toggle({
     end
 })
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
--- ฟังก์ชัน NetGet
 local CounterTable
 pcall(function()
     for _, Obj in ipairs(getgc(true)) do
@@ -1984,11 +1987,6 @@ local HideNameEnabled = false
 local AntiLookEnabled = false
 local AntiRagdollEnabled = false
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local Data_upvr = require(ReplicatedStorage.Modules.Core.Data) -- โมดูล Data ของเกม
-
--- สร้างปุ่มสำหรับดูเงิน ATM
 local bankButton = CheaterTab:Button({
     Title = "🏦 Bank Balance :",
     Desc = "<font color=\"rgb(0,255,255)\">$0</font>", -- สีฟ้าสดใส
@@ -2256,10 +2254,6 @@ CheaterTab:Toggle({
         if state then PlayAntiLook() else StopAntiLook() end
     end
 })
-
-local Players = game:GetService("Players")  
-local RunService = game:GetService("RunService")  
-local ReplicatedStorage = game:GetService("ReplicatedStorage")  
   
 local player = Players.LocalPlayer  
 local char = player.Character or player.CharacterAdded:Wait()  
