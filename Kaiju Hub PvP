@@ -2466,3 +2466,96 @@ UserInputService.InputBegan:Connect(function(input,gpe)
     if gpe then return end
     if input.KeyCode==Enum.KeyCode.Z then SnapQuick() end
 end)
+
+
+local ConfigManager = Window.ConfigManager  
+local Loaded = false  
+local AutoSaveName = "MyAutoConfig"  
+_G.LastConfigName = _G.LastConfigName or AutoSaveName  
+
+local function SendNotify(title, content, icon)  
+    if WindUI and WindUI.Notify then  
+        pcall(function()
+            WindUI:Notify({  
+                Title = title or "Notification",  
+                Content = content or "",  
+                Duration = 2,  
+                Icon = icon or "zap"  
+            })  
+        end)
+    end  
+end  
+
+-- ปุ่มบันทึก Config
+SettingsTab:Button({  
+    Title = "Save Config",  
+    Icon = "save",  
+    Callback = function()  
+        local oldCfg = ConfigManager:CreateConfig(AutoSaveName)  
+        oldCfg:Delete()  -- ลบก่อนบันทึกใหม่  
+        local c = ConfigManager:CreateConfig(AutoSaveName)  
+        c:Save()  
+        _G.LastConfigName = AutoSaveName  
+        SendNotify("Config Manager", "Config Successfully Saved", "save")  
+    end  
+})  
+
+-- ปุ่มโหลด Config
+SettingsTab:Button({  
+    Title = "Load Config",  
+    Icon = "clock",  
+    Callback = function()  
+        local success, err = pcall(function()  
+            local cfg = ConfigManager:CreateConfig(AutoSaveName)  
+            cfg:Load()  
+        end)  
+        if success then  
+            _G.LastConfigName = AutoSaveName  
+            SendNotify("Config Manager", "Config Successfully Loaded", "check")  
+        else  
+            SendNotify("Config Manager", "Load Failed: " .. tostring(err), "alert")  
+        end  
+    end  
+})  
+
+-- ปุ่มลบ Config
+SettingsTab:Button({  
+    Title = "Delete Config",  
+    Icon = "trash",  
+    Callback = function()  
+        local success, err = pcall(function()  
+            local cfg = ConfigManager:CreateConfig(AutoSaveName)  
+            cfg:Delete()  
+        end)  
+        if success then  
+            SendNotify("Config Manager", "Config Successfully Deleted", "trash")  
+        else  
+            SendNotify("Config Manager", "Delete Failed: " .. tostring(err), "alert")  
+        end  
+    end  
+})  
+
+-- โหลดอัตโนมัติเมื่อสคริปต์เริ่ม
+task.spawn(function()  
+    while not ConfigManager or not WindUI or not WindUI.Notify do  
+        task.wait(0.5)  
+    end  
+
+    if Loaded then return end  
+    Loaded = true  
+
+    SendNotify("Config Manager", "Loading Config...", "clock")  
+    task.wait(1)  
+
+    local success, err = pcall(function()  
+        local cfg = ConfigManager:CreateConfig(AutoSaveName)  
+        cfg:Load()  
+    end)  
+
+    if success then  
+        _G.LastConfigName = AutoSaveName  
+        SendNotify("Config Manager", "Config Successfully Loaded", "check")  
+    else  
+        SendNotify("Config Manager", "Load Failed: " .. tostring(err), "alert")  
+    end  
+end)
