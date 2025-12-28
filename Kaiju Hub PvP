@@ -365,8 +365,9 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-CombatTab:Toggle({
+local SilentAimToggle = CombatTab:Toggle({
     Title = "Silent Aim",
+    Flag = "SilentAimEnabled",
     Value = SilentAimEnabledValue.Value,
     Callback = function(state)
         SilentAimEnabledValue.Value = state
@@ -375,41 +376,47 @@ CombatTab:Toggle({
     end
 })
 
-CombatTab:Toggle({
+local AttackAntiLockToggle = CombatTab:Toggle({
     Title = "Attack Anti Lock",
+    Flag = "AttackAntiLockEnabled",
     Value = AttackAntiLockEnabledValue.Value,
     Callback = function(state)
         AttackAntiLockEnabledValue.Value = state
     end
 })
 
-CombatTab:Toggle({
+local AttackAntiKillToggle = CombatTab:Toggle({
     Title = "Attack Anti Kill",
+    Flag = "AttackAntiKillEnabled",
     Value = AttackAntiKillEnabledValue.Value,
     Callback = function(state)
         AttackAntiKillEnabledValue.Value = state
-        if state then
-            print("✅ Attack Anti Kill: ON (Prediction Disabled)")
-        else
-            print("❌ Attack Anti Kill: OFF (Prediction Enabled)")
-        end
     end
 })
 
 CombatTab:Space()
 
-CombatTab:Slider({
+-- FOV Slider
+local FOVSlider = CombatTab:Slider({
     Title = "FOV :",
+    Flag = "FOVRadius",
+    Value = {Min = 10, Max = 1000, Default = 150},
     Step = 5,
-    Value = {Min = 10, Max = 1000, Default = FOVRadiusValue.Value},
-    Callback = function(value) FOVRadiusValue.Value = value end
+    Callback = function(value)
+        FOVRadiusValue.Value = value
+        fovCircle.Radius = value
+    end
 })
 
-CombatTab:Slider({
+-- Lock Distance Slider
+local LockDistanceSlider = CombatTab:Slider({
     Title = "Lock Distance :",
+    Flag = "LockDistance",
+    Value = {Min = 50, Max = 3000, Default = 1000},
     Step = 25,
-    Value = {Min = 50, Max = 3000, Default = LockDistanceValue.Value},
-    Callback = function(value) LockDistanceValue.Value = value end
+    Callback = function(value)
+        LockDistanceValue.Value = value
+    end
 })
 
 CombatTab:Dropdown({
@@ -419,10 +426,13 @@ CombatTab:Dropdown({
     Callback = function(option) TargetPartValue.Value = option end
 })
 
-CombatTab:Toggle({
+local MagicBulletToggle = CombatTab:Toggle({
     Title = "Magic Bullet",
+    Flag = "MagicBullet",
     Value = MagicBulletValue.Value,
-    Callback = function(state) MagicBulletValue.Value = state end
+    Callback = function(state)
+        MagicBulletValue.Value = state
+    end
 })
 
 -- Safe Players Multi Dropdown + Refresh
