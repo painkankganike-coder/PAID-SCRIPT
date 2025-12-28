@@ -2041,13 +2041,75 @@ local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AutoSprintEnabled = false
+local SprintLoop = nil
+local OriginalSprintUpdate = nil
 
 local Net = {}
 function Net.send(...)
-    local success, err = pcall(function()
+    pcall(function()
         ReplicatedStorage.Remotes.Send:FireServer(...)
     end)
-    if not success then warn(err) end
+end
+
+local function EnableInfiniteStamina()
+    local SprintModule
+    local ok = pcall(function()
+        SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
+    end)
+    if not ok or not SprintModule then return end
+
+    local consume_stamina = SprintModule.consume_stamina
+    local SprintBar
+
+    for _, v in ipairs(debug.getupvalues(consume_stamina)) do
+        if type(v) == "table" and v.sprint_bar then
+            SprintBar = v.sprint_bar
+            break
+        end
+    end
+
+    if not SprintBar or not SprintBar.update then return end
+
+    OriginalSprintUpdate = SprintBar.update
+    SprintBar.update = function() return 1 end
+
+    SprintLoop = task.spawn(function()
+        while AutoSprintEnabled do
+            pcall(function()
+                Net.send("set_sprinting_1", true)
+                task.wait(0.4)
+                Net.send("set_sprinting_1", false)
+            end)
+            task.wait(0.15)
+        end
+        pcall(function()
+            Net.send("set_sprinting_1", false)
+        end)
+    end)
+end
+
+local function DisableInfiniteStamina()
+    AutoSprintEnabled = false
+    if SprintLoop then
+        task.cancel(SprintLoop)
+        SprintLoop = nil
+    end
+
+    local SprintModule
+    pcall(function()
+        SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
+    end)
+
+    if SprintModule and OriginalSprintUpdate then
+        local consume_stamina = SprintModule.consume_stamina
+        for _, v in ipairs(debug.getupvalues(consume_stamina)) do
+            if type(v) == "table" and v.sprint_bar then
+                v.sprint_bar.update = OriginalSprintUpdate
+                break
+            end
+        end
+    end
+    OriginalSprintUpdate = nil
 end
 
 CheaterTab:Toggle({
@@ -2055,73 +2117,10 @@ CheaterTab:Toggle({
     Default = false,
     Callback = function(state)
         AutoSprintEnabled = state
-
         if state then
-            local SprintModule
-            local ok = pcall(function()
-                SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
-            end)
-            if not ok or not SprintModule then return end
-
-            local consume_stamina = SprintModule.consume_stamina
-            local SprintBar
-
-            for i, v in ipairs(debug.getupvalues(consume_stamina)) do
-                if type(v) == "table" and v.sprint_bar then
-                    SprintBar = v.sprint_bar
-                    break
-                end
-            end
-
-            if not SprintBar or not SprintBar.update then return end
-
-            getgenv().OriginalSprintUpdate = SprintBar.update
-
-            SprintBar.update = function()
-                return 1
-            end
-
-            getgenv().AutoSprintLoop = task.spawn(function()
-                while AutoSprintEnabled do
-                    pcall(function()
-                        Net.send("set_sprinting_1", true)
-                        task.wait(0.4)
-                        Net.send("set_sprinting_1", false)
-                    end)
-                    task.wait(0.15)
-                end
-                pcall(function()
-                    Net.send("set_sprinting_1", false)
-                end)
-            end)
+            EnableInfiniteStamina()
         else
-            if getgenv().AutoSprintLoop then
-                task.cancel(getgenv().AutoSprintLoop)
-                getgenv().AutoSprintLoop = nil
-            end
-
-            pcall(function()
-                Net.send("set_sprinting_1", false)
-            end)
-
-            local SprintModule
-            pcall(function()
-                SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
-            end)
-
-            if SprintModule and getgenv().OriginalSprintUpdate then
-                pcall(function()
-                    local consume_stamina = SprintModule.consume_stamina
-                    for i, v in ipairs(debug.getupvalues(consume_stamina)) do
-                        if type(v) == "table" and v.sprint_bar then
-                            v.sprint_bar.update = getgenv().OriginalSprintUpdate
-                            break
-                        end
-                    end
-                end)
-            end
-
-            getgenv().OriginalSprintUpdate = nil
+            DisableInfiniteStamina()
         end
     end
 })
