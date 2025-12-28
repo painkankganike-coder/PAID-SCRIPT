@@ -2185,12 +2185,14 @@ CheaterTab:Divider()
 CheaterTab:Section({Title="att :"})
 
 CheaterTab:Toggle({
-    Title = "Pickup Items",
-    Flag = "PickupEnabled",
-    Value = PickupEnabled,
+    Title = "Hide Name",
+    Flag = "HideNameEnabled",
+    Value = HideNameEnabled,
     Callback = function(state)
-        PickupEnabled = state
-        print("🧲 Auto Pickup Items:", state and "ON" or "OFF")
+        HideNameEnabled = state
+        if state then
+            RemoveBillboardGui()
+        end
     end
 })
 -- อัปเดต BillboardGui ทุกเฟรม (Realtime)
