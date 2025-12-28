@@ -1445,9 +1445,6 @@ ServerTab:Button({
     end
 })
 
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-
 local Automatic = false
 local FireRateEnabled = false
 local FireRate = 1500
