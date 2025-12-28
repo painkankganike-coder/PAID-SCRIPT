@@ -1676,8 +1676,6 @@ local JumpEnabled = false
 local HideNameEnabled = false
 local AntiLookEnabled = false
 local AntiRagdollEnabled = false
-local AutoSprintEnabled = false
-
 
 local bankButton = CheaterTab:Button({
     Title = "🏦 Bank Balance :",
@@ -2038,32 +2036,48 @@ CheaterTab:Toggle({
     end  
 })
 
+-- Infinite Stamina Toggle
+local AutoSprintEnabled = false
+
 CheaterTab:Toggle({
     Title = "Infinite Stamina",
     Default = false,
     Callback = function(state)
         AutoSprintEnabled = state
 
+        -- โหลด Sprint Module
+        local SprintModule
+        local ok = pcall(function()
+            SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
+        end)
+        if not ok or not SprintModule then
+            warn("❌ Sprint Module not found!")
+            return
+        end
+
+        local consume_stamina = SprintModule.consume_stamina
+        if not consume_stamina then
+            warn("❌ consume_stamina not found in Sprint Module")
+            return
+        end
+
+        -- ดึง SprintBar
+        local SprintBar
+        pcall(function()
+            local ups = debug.getupvalues(consume_stamina)
+            SprintBar = ups[2] and ups[2].sprint_bar
+        end)
+
+        if not SprintBar or not SprintBar.update then
+            warn("❌ SprintBar not found or missing update function")
+            return
+        end
+
         if state then
-            local SprintModule
-            local ok = pcall(function()
-                SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
-            end)
-            if not ok or not SprintModule then return end
-
-            local consume_stamina = SprintModule.consume_stamina
-            local SprintBar
-
-            pcall(function()
-                local ups = debug.getupvalues(consume_stamina)
-                SprintBar = ups[2] and ups[2].sprint_bar
-            end)
-
-            if not SprintBar or not SprintBar.update then return end
-
+            -- เก็บฟังก์ชันเดิม
             getgenv().OriginalSprintUpdate = SprintBar.update
 
-            -- Lock stamina full
+            -- Lock Stamina Full
             SprintBar.update = function()
                 return 1
             end
@@ -2080,6 +2094,7 @@ CheaterTab:Toggle({
                     end)
                     task.wait(0.15)
                 end
+                -- ปิด Sprint
                 pcall(function()
                     if Net then
                         Net.send("set_sprinting_1", false)
@@ -2093,25 +2108,22 @@ CheaterTab:Toggle({
                 Duration = 3
             })
         else
+            -- ปิด Auto Sprint Loop
             if getgenv().AutoSprintLoop then
                 task.cancel(getgenv().AutoSprintLoop)
                 getgenv().AutoSprintLoop = nil
             end
 
+            -- Reset Sprint state
             pcall(function()
                 if Net then
                     Net.send("set_sprinting_1", false)
                 end
             end)
 
-            local SprintModule
-            pcall(function()
-                SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
-            end)
-
-            if SprintModule and getgenv().OriginalSprintUpdate then
+            -- Restore original update function
+            if getgenv().OriginalSprintUpdate then
                 pcall(function()
-                    local consume_stamina = SprintModule.consume_stamina
                     local ups = debug.getupvalues(consume_stamina)
                     local SprintBar = ups[2] and ups[2].sprint_bar
                     if SprintBar then
@@ -2119,7 +2131,6 @@ CheaterTab:Toggle({
                     end
                 end)
             end
-
             getgenv().OriginalSprintUpdate = nil
 
             WindUI:Notify({
@@ -2130,6 +2141,28 @@ CheaterTab:Toggle({
         end
     end
 })
+
+-- Bypass Kick Function (ใส่ล่างสุด)
+pcall(function()
+    local kickF
+    -- หา function kick ของผู้เล่น
+    for _, func in ipairs(getconnections(LocalPlayer.OnKick)) do
+        if func.Function then
+            kickF = func.Function
+            break
+        end
+    end
+
+    if kickF then
+        hookfunction(kickF, function(p12, p13, p14, p15, ...)
+            -- return call ปกติเพื่อ bypass
+            return p12(p13, p14, p15, ...)
+        end)
+        print("✅ Kick function bypass applied!")
+    else
+        warn("❌ Kick function not found!")
+    end
+end)
 
 CheaterTab:Divider()
 CheaterTab:Section({Title="att :"})
