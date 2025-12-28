@@ -1445,21 +1445,84 @@ ServerTab:Button({
     end
 })
 
-local FireRateValue = Instance.new("NumberValue")
-FireRateValue.Name = "FireRateValue"
-FireRateValue.Value = 1500
-FireRateValue.Parent = LocalPlayer
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
 
+local Automatic = false
 local FireRateEnabled = false
-local updatedTools = {}
+local FireRate = 1500
+local toolCache = {}
+
+local function matchesTarget(name, target)
+    name = name:lower()
+    target = target:lower()
+    return name:find(target) ~= nil or name:match("%d*_" .. target .. "_?%d*") ~= nil
+end
+
+local function applyAttributesSmart(gun)
+    if not FireRateEnabled then return end -- ตรวจสอบว่าเปิด Fire Rate หรือไม่
+
+    local prev = toolCache[gun]
+    if prev and prev.FireRate == FireRate then return end
+
+    local attrValue = gun:GetAttribute("fire_rate")
+    if attrValue ~= nil then
+        gun:SetAttribute("fire_rate", FireRate)
+    end
+
+    for _, child in ipairs(gun:GetDescendants()) do
+        if (child:IsA("NumberValue") or child:IsA("IntValue")) and matchesTarget(child.Name, "fire_rate") then
+            child.Value = FireRate
+        end
+    end
+
+    toolCache[gun] = { FireRate = FireRate }
+end
+
+local function updateAllGuns()
+    if not FireRateEnabled then return end -- ตรวจสอบว่าเปิด Fire Rate หรือไม่
+
+    if player.Character then
+        for _, tool in ipairs(player.Character:GetChildren()) do
+            if tool:IsA("Tool") then
+                applyAttributesSmart(tool)
+            end
+        end
+    end
+
+    for _, tool in ipairs(player.Backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            applyAttributesSmart(tool)
+        end
+    end
+end
+
+player.CharacterAdded:Connect(function(char)
+    if Automatic then
+        updateAllGuns()
+    end
+
+    char.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") and Automatic then
+            applyAttributesSmart(child)
+        end
+    end)
+end)
+
+player.Backpack.ChildAdded:Connect(function(child)
+    if child:IsA("Tool") and Automatic then
+        applyAttributesSmart(child)
+    end
+end)
 
 WeaponTab:Slider({
     Title = "Fire Rate",
-    Flag = "FireRateValue",
+    Flag = "FireRateSlider",
+    Value = { Min = 100, Max = 2000, Default = FireRate },
     Step = 1,
-    Value = {Min = 100, Max = 3000, Default = FireRateValue.Value},
     Callback = function(value)
-        FireRateValue.Value = value
+        FireRate = tonumber(value)
+        updateAllGuns()
     end
 })
 
@@ -1468,63 +1531,28 @@ WeaponTab:Section({Title="Use Apply guns:"})
 
 WeaponTab:Toggle({
     Title = "Apply Fire Rate",
-    Flag = "FireRateEnabled",
-    Value = FireRateEnabled,
+    Flag = "FireRateToggle",
+    Default = false,
     Callback = function(state)
         FireRateEnabled = state
+        if FireRateEnabled then
+            updateAllGuns()
+        end
     end
 })
 
-local function UpdateToolFireRate(tool)
-    if not tool or updatedTools[tool] then return end
-    updatedTools[tool] = true
-    for _, v in pairs(getgc(true)) do
-        if typeof(v) == "table" and rawget(v,"states") then
-            local s = v.states
-            if s.instance == tool and s.fire_rate and typeof(s.fire_rate) == "userdata" and s.fire_rate.set then
-                s.fire_rate:set(FireRateValue.Value)
-            end
+WeaponTab:Toggle({
+    Title = "Automatic",
+    Flag = "AutomaticToggle",
+    Default = false,
+    Callback = function(state)
+        Automatic = state
+        if Automatic then
+            updateAllGuns()
         end
     end
-end
+})
 
-LocalPlayer.Character.ChildAdded:Connect(function(child)
-    if child:IsA("Tool") then UpdateToolFireRate(child) end
-end)
-
-task.spawn(function()
-    local char = LocalPlayer.Character
-    if char then
-        for _, tool in pairs(char:GetChildren()) do
-            if tool:IsA("Tool") then UpdateToolFireRate(tool) end
-        end
-    end
-end)
-
--- Fire Rate Loop (ถาวร + Remote) แต่ทำงานเฉพาะเมื่อเปิด Toggle
-task.spawn(function()
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local sendRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Send")
-    while true do
-        if FireRateEnabled then
-            for _, v in pairs(getgc(true)) do
-                if typeof(v) == "table" and rawget(v,"states") then
-                    local s = v.states
-                    if s.fire_rate and typeof(s.fire_rate) == "userdata" and s.fire_rate.set then
-                        s.fire_rate:set(FireRateValue.Value)
-                        if sendRemote then
-                            pcall(function()
-                                sendRemote:FireServer({fire_rate = FireRateValue.Value})
-                            end)
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(0.25)
-    end
-end)
--- No Recoil
 local GunModule = require(ReplicatedStorage.Modules.Game.ItemTypes.Gun)
 getgenv().NoRecoilEnabled = false
 local original_recoil = GunModule.apply_recoil
@@ -1581,7 +1609,6 @@ WeaponTab:Toggle({
         ToggleNoRecoil(state)
     end
 })
-
 -- Hit Aura
 WeaponTab:Section({Title="Auto Hit :"})
 getgenv().HitAuraEnabled = false
