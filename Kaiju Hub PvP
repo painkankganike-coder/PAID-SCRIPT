@@ -2839,40 +2839,6 @@ local function safeButton(callback)
 end
 
 MiscTab:Button({
-    Title = "Claim All Quests",
-    Callback = safeButton(function()
-        local claimed = 0
-        local success, questFrame = pcall(function()
-            return LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Quests"):WaitForChild("QuestsHolder"):WaitForChild("QuestsScrollingFrame")
-        end)
-        if success and questFrame then
-            for _, child in ipairs(questFrame:GetChildren()) do
-                if (child:IsA("Frame") or child:IsA("TextButton") or child:IsA("ImageButton")) and child.Name ~= "" then
-                    pcall(function()
-                        local CounterTable
-                        for _, Obj in ipairs(getgc(true)) do
-                            if typeof(Obj) == "table" and rawget(Obj,"event") and rawget(Obj,"func") then
-                                CounterTable = Obj
-                                break
-                            end
-                        end
-                        if CounterTable then
-                            local GetRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get")
-                            GetRemote:InvokeServer(CounterTable.func + 1, "claim_quest", child.Name)
-                        end
-                    end)
-                    claimed += 1
-                    task.wait(0.2)
-                end
-            end
-            print("✅ Claimed "..claimed.." Quests!")
-        else
-            warn("❌ Quest GUI ไม่พบ!")
-        end
-    end)
-})
-
-MiscTab:Button({
     Title = "Boost FPS",
     Callback = safeButton(function()
         local lighting = game:GetService("Lighting")
