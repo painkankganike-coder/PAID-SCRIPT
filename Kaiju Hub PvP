@@ -11,37 +11,19 @@ local Players, RunService, Camera, LocalPlayer, ReplicatedStorage =
     game.Players.LocalPlayer,
     game:GetService("ReplicatedStorage")
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local Players           = game:GetService("Players")
+local LocalPlayer       = Players.LocalPlayer
+local RunService        = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ContentProvider = game:GetService("ContentProvider")
-local LocalPlayer = Players.LocalPlayer
+local Workspace         = game:GetService("Workspace")
+local Camera            = Workspace.CurrentCamera
+local PlayerGui         = LocalPlayer:WaitForChild("PlayerGui")
+local ContentProvider   = game:GetService("ContentProvider")
+local TeleportService   = game:GetService("TeleportService")
+local HttpService       = game:GetService("HttpService")
 
-local Players = game:GetService("Players")      
-local RunService = game:GetService("RunService")      
-local Workspace = game:GetService("Workspace")      
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local Data_upvr = require(ReplicatedStorage.Modules.Core.Data) 
-
-local Players = game:GetService("Players")  
-local RunService = game:GetService("RunService")  
-local ReplicatedStorage = game:GetService("ReplicatedStorage")  
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
+-- Modules
+local Data_upvr = require(ReplicatedStorage.Modules.Core.Data)
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
 local Window = WindUI:CreateWindow({
