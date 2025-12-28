@@ -1747,7 +1747,7 @@ CheaterTab:Slider({
     end
 })
 
-local SpeedToggle = CheaterTab:Toggle({
+CheaterTab:Toggle({
     Title = "Speed",
     Flag = "SpeedEnabled",
     Value = SpeedEnabled,
@@ -1802,7 +1802,7 @@ CheaterTab:Slider({
     end
 })
 
-local JumpToggle = CheaterTab:Toggle({
+CheaterTab:Toggle({
     Title = "Jump",
     Flag = "JumpEnabled",
     Value = JumpEnabled,
@@ -1948,16 +1948,16 @@ local function StopAntiLook()
     end
 end
 
-local AntiLookToggle = CheaterTab:Toggle({
+CheaterTab:Toggle({
     Title = "Anti Lock",
     Flag = "AntiLookEnabled",
     Value = AntiLookEnabled,
     Callback = function(state)
         AntiLookEnabled = state
-        if state then
-            PlayAntiLook()
-        else
-            StopAntiLook()
+        if state then 
+            PlayAntiLook() 
+        else 
+            StopAntiLook() 
         end
     end
 })
@@ -2184,18 +2184,15 @@ end)
 CheaterTab:Divider()
 CheaterTab:Section({Title="att :"})
 
-local HideNameToggle = CheaterTab:Toggle({
-    Title = "Hide Name",
-    Flag = "HideNameEnabled",
-    Value = HideNameEnabled,
+CheaterTab:Toggle({
+    Title = "Pickup Items",
+    Flag = "PickupEnabled",
+    Value = PickupEnabled,
     Callback = function(state)
-        HideNameEnabled = state
-        if state then
-            RemoveBillboardGui()
-        end
+        PickupEnabled = state
+        print("🧲 Auto Pickup Items:", state and "ON" or "OFF")
     end
 })
-
 -- อัปเดต BillboardGui ทุกเฟรม (Realtime)
 RunService.RenderStepped:Connect(function()
     if HideNameEnabled and LocalPlayer.Character then
@@ -2297,7 +2294,7 @@ RunService.RenderStepped:Connect(function()
     AntiRagdoll()
 end)
 
-local AntiKillToggle = CheaterTab:Toggle({
+CheaterTab:Toggle({
     Title = "Anti Kill",
     Flag = "UndergroundAutoEnabled",
     Value = UndergroundAutoEnabled,
@@ -2358,7 +2355,7 @@ local function startAntiRagdoll()
     end)
 end
 
-local AntiRagdollToggle = CheaterTab:Toggle({
+CheaterTab:Toggle({
     Title = "Anti Ragdoll",
     Flag = "AntiRagdollEnabled",
     Value = AntiRagdollEnabled,
@@ -2458,10 +2455,12 @@ CheaterTab:Button({
 })
 
 CheaterTab:Slider({
-    Title="Snap Depth",
-    Step=1 Value={Min=1,Max=50,Default=math.abs(SnapHeightOffset)},
-    Callback=function(val)
-        SnapHeightOffset=(SnapDirection=="Down" and -1 or 1)*val
+    Title = "Snap Depth",
+    Flag = "SnapHeightOffset",
+    Step = 1,
+    Value = {Min = 1, Max = 50, Default = math.abs(SnapHeightOffset)},
+    Callback = function(val)
+        SnapHeightOffset = (SnapDirection=="Down" and -1 or 1)*val
     end
 })
 
