@@ -146,10 +146,12 @@ local IgnorePlayers = {}
 local CurrentTarget, head, aimPos
 local hue = 0
 
+-- ปืนที่รองรับ
 local GunNames = {"P226","MP5","M24","Draco","Glock","Sawnoff","Uzi","G3","C9","Hunting Rifle","Anaconda","AK47","Remington","Double Barrel"}
 local GunLookup = {}
 for _, name in pairs(GunNames) do GunLookup[name] = true end
 
+-- FOV Circle
 local fovCircle = Drawing.new("Circle")
 fovCircle.Thickness = 1
 fovCircle.NumSides = 100
@@ -158,6 +160,7 @@ fovCircle.Filled = false
 fovCircle.Visible = SilentAimEnabledValue.Value
 fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
+-- Tracer
 local tracerLine = Drawing.new("Line")
 tracerLine.Thickness = 1
 tracerLine.Visible = false
@@ -171,6 +174,7 @@ local function PredictPosition(headPart)
     local velocity = root.Velocity
     local prediction = headPart.Position + (velocity * PREDICTION_FACTOR)
 
+    -- รองรับรถ (เพิ่ม Velocity รถ x1.2)
     local seat = root:FindFirstChildWhichIsA("WeldConstraint") or root:FindFirstChildWhichIsA("Weld")
     if seat and seat.Part0 then
         prediction = headPart.Position + (seat.Part0.Velocity * PREDICTION_FACTOR * 1.2)
@@ -188,6 +192,7 @@ local function AntiLockPrediction(part)
 
     local headPos = part.Position + Vector3.new(0, (part:IsA("BasePart") and part.Size.Y or 1)/2, 0)
 
+    -- ถ้าเปิด Attack Anti Kill คืนตำแหน่งตรง ๆ
     if AttackAntiKillEnabledValue.Value then
         return headPos
     end
@@ -195,6 +200,7 @@ local function AntiLockPrediction(part)
     if AttackAntiLockEnabledValue.Value then
         local speed = root and root.Velocity.Magnitude or 0
         local factor = (speed >= 14) and 6 or 0
+        -- ตรวจจับทิศทางเดินแบบสี่มุม (x,z)
         local vel = root.Velocity
         local x = vel.X
         local z = vel.Z
@@ -210,6 +216,7 @@ local function AntiLockPrediction(part)
     end
 end
 
+-- ฟังก์ชัน Ignore
 local function IsIgnored(plr)
     for _, name in ipairs(IgnorePlayers) do
         if string.lower(plr.Name) == string.lower(name) then
@@ -219,6 +226,7 @@ local function IsIgnored(plr)
     return false
 end
 
+-- หาเป้าหมายใกล้ FOV
 local function GetClosestTarget()
     local closest
     local shortest = math.huge
@@ -243,6 +251,7 @@ local function GetClosestTarget()
     return closest
 end
 
+-- เช็คว่าถือปืน
 local function IsHoldingAllowedGun(args)
     local ok, weapon = pcall(function() return args[3] end)
     if ok and typeof(weapon) == "Instance" and GunLookup[weapon.Name] then return true end
@@ -254,6 +263,7 @@ local function IsHoldingAllowedGun(args)
     return false
 end
 
+-- ตรวจกำแพง
 local function IsBehindWall(targetHead)
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Head") then return false end
     local origin = LocalPlayer.Character.Head.Position
@@ -265,6 +275,8 @@ local function IsBehindWall(targetHead)
     return result and result.Instance and not result.Instance:IsDescendantOf(targetHead.Parent)
 end
 
+-- Hook ยิง
+-- Hook ยิง
 local send = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Send")
 local oldFire
 oldFire = hookfunction(send.FireServer, function(self, ...)
@@ -296,7 +308,8 @@ oldFire = hookfunction(send.FireServer, function(self, ...)
             beam.Color = Color3.new(1,1,1) -- เริ่มสีขาว
             game:GetService("Debris"):AddItem(beam, 1)
 
-            task.delay(0.5, function()
+            -- เปลี่ยนเป็นสีรุ้งหลัง 0.4 วิ
+            task.delay(0.4, function()
                 if beam and beam.Parent then
                     local hue = math.random()
                     beam.Color = Color3.fromHSV(hue, 1, 1)
@@ -306,9 +319,9 @@ oldFire = hookfunction(send.FireServer, function(self, ...)
     end
     return oldFire(self, unpack(args))
 end)
-
+-- Render FOV + Tracer
 RunService.RenderStepped:Connect(function()
-
+    -- อัปเดต FOV
     fovCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     fovCircle.Radius = FOVRadiusValue.Value
     hue = (hue + 0.0005) % 1
@@ -339,8 +352,9 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-CombatTab:Toggle({
+local SilentAimToggle = CombatTab:Toggle({
     Title = "Silent Aim",
+    Flag = "SilentAimEnabled",
     Value = SilentAimEnabledValue.Value,
     Callback = function(state)
         SilentAimEnabledValue.Value = state
@@ -349,41 +363,47 @@ CombatTab:Toggle({
     end
 })
 
-CombatTab:Toggle({
+local AttackAntiLockToggle = CombatTab:Toggle({
     Title = "Attack Anti Lock",
+    Flag = "AttackAntiLockEnabled",
     Value = AttackAntiLockEnabledValue.Value,
     Callback = function(state)
         AttackAntiLockEnabledValue.Value = state
     end
 })
 
-CombatTab:Toggle({
+local AttackAntiKillToggle = CombatTab:Toggle({
     Title = "Attack Anti Kill",
+    Flag = "AttackAntiKillEnabled",
     Value = AttackAntiKillEnabledValue.Value,
     Callback = function(state)
         AttackAntiKillEnabledValue.Value = state
-        if state then
-            print("✅ Attack Anti Kill: ON (Prediction Disabled)")
-        else
-            print("❌ Attack Anti Kill: OFF (Prediction Enabled)")
-        end
     end
 })
 
 CombatTab:Space()
 
-CombatTab:Slider({
+-- FOV Slider
+local FOVSlider = CombatTab:Slider({
     Title = "FOV :",
+    Flag = "FOVRadius",
+    Value = {Min = 10, Max = 1000, Default = 150},
     Step = 5,
-    Value = {Min = 10, Max = 1000, Default = FOVRadiusValue.Value},
-    Callback = function(value) FOVRadiusValue.Value = value end
+    Callback = function(value)
+        FOVRadiusValue.Value = value
+        fovCircle.Radius = value
+    end
 })
 
-CombatTab:Slider({
+-- Lock Distance Slider
+local LockDistanceSlider = CombatTab:Slider({
     Title = "Lock Distance :",
+    Flag = "LockDistance",
+    Value = {Min = 50, Max = 3000, Default = 1000},
     Step = 25,
-    Value = {Min = 50, Max = 1000, Default = LockDistanceValue.Value},
-    Callback = function(value) LockDistanceValue.Value = value end
+    Callback = function(value)
+        LockDistanceValue.Value = value
+    end
 })
 
 CombatTab:Dropdown({
@@ -393,10 +413,13 @@ CombatTab:Dropdown({
     Callback = function(option) TargetPartValue.Value = option end
 })
 
-CombatTab:Toggle({
+local MagicBulletToggle = CombatTab:Toggle({
     Title = "Magic Bullet",
+    Flag = "MagicBullet",
     Value = MagicBulletValue.Value,
-    Callback = function(state) MagicBulletValue.Value = state end
+    Callback = function(state)
+        MagicBulletValue.Value = state
+    end
 })
 
 -- Safe Players Multi Dropdown + Refresh
@@ -451,15 +474,60 @@ local HealthEnabled = CreateBool("ESPHealthEnabled")
 local HighlightEnabled = CreateBool("ESPHighlightEnabled")
 local TracerEnabled = CreateBool("ESPTracerEnabled")
 
--- Toggle ทุกฟังก์ชัน
-EspTab:Toggle({Title = "Box", Value = BoxEnabled.Value, Callback = function(state) BoxEnabled.Value = state end})
-EspTab:Toggle({Title = "Name", Value = NameEnabled.Value, Callback = function(state) NameEnabled.Value = state end})
-EspTab:Toggle({Title = "Distance", Value = DistanceEnabled.Value, Callback = function(state) DistanceEnabled.Value = state end})
-EspTab:Toggle({Title = "Health", Value = HealthEnabled.Value, Callback = function(state) HealthEnabled.Value = state end})
-EspTab:Toggle({Title = "Highlight", Value = HighlightEnabled.Value, Callback = function(state) HighlightEnabled.Value = state end})
-EspTab:Toggle({Title = "Tracer", Value = TracerEnabled.Value, Callback = function(state) TracerEnabled.Value = state end})
+EspTab:Toggle({
+    Title = "Box",
+    Value = BoxEnabled.Value,
+    Flag = "ESPBoxEnabled",
+    Callback = function(state)
+        BoxEnabled.Value = state
+    end
+})
 
--- ESP Storage
+EspTab:Toggle({
+    Title = "Name",
+    Value = NameEnabled.Value,
+    Flag = "ESPNameEnabled",
+    Callback = function(state)
+        NameEnabled.Value = state
+    end
+})
+
+EspTab:Toggle({
+    Title = "Distance",
+    Value = DistanceEnabled.Value,
+    Flag = "ESPDistanceEnabled",
+    Callback = function(state)
+        DistanceEnabled.Value = state
+    end
+})
+
+EspTab:Toggle({
+    Title = "Health",
+    Value = HealthEnabled.Value,
+    Flag = "ESPHealthEnabled",
+    Callback = function(state)
+        HealthEnabled.Value = state
+    end
+})
+
+EspTab:Toggle({
+    Title = "Highlight",
+    Value = HighlightEnabled.Value,
+    Flag = "ESPHighlightEnabled",
+    Callback = function(state)
+        HighlightEnabled.Value = state
+    end
+})
+
+EspTab:Toggle({
+    Title = "Tracer",
+    Value = TracerEnabled.Value,
+    Flag = "ESPTracerEnabled",
+    Callback = function(state)
+        TracerEnabled.Value = state
+    end
+})
+
 local espBoxes, espNames, espDistances, healthBars, highlights, tracerLines = {}, {}, {}, {}, {}, {}
 local hue = 0
 
@@ -712,6 +780,279 @@ end)
 
 EspTab:Divider()
 EspTab:Section({Title="Esp item:"})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ContentProvider = game:GetService("ContentProvider")
+local LocalPlayer = Players.LocalPlayer
+
+local ItemESP_Enabled = false
+local BillboardCache = {}
+local ItemESP_UpdateConnections = {}
+local WeaponDB = {}
+local PreloadedImages = {}
+
+local RARITY_COLORS = {
+    ["Common"] = Color3.fromRGB(230, 224, 224),
+    ["Uncommon"] = Color3.fromRGB(200, 230, 200),
+    ["Rare"] = Color3.fromRGB(160, 200, 255),
+    ["Epic"] = Color3.fromRGB(200, 160, 255),
+    ["Legendary"] = Color3.fromRGB(255, 200, 120),
+    ["Omega"] = Color3.fromRGB(255, 120, 120),
+}
+
+-- ฟังก์ชันสร้าง key ของ Tool
+local function generateUniqueKey(tool)
+    if not tool or not tool:IsA("Tool") then return nil end
+    local itemId = tool:GetAttribute("ItemId") or tool:GetAttribute("Id") or tool:GetAttribute("WeaponId") or tool:GetAttribute("GunId")
+    if itemId and itemId ~= "" then
+        return "ITEMID_" .. tostring(itemId)
+    end
+
+    local partsData = {}
+    for _, part in ipairs(tool:GetDescendants()) do
+        if part:IsA("SpecialMesh") and part.MeshId and part.MeshId ~= "" then
+            table.insert(partsData, "MESH_"..part.MeshId.."|TEX_"..(part.TextureId or "NOTEX"))
+        elseif part:IsA("MeshPart") and part.MeshId and part.MeshId ~= "" then
+            table.insert(partsData, "MESH_"..part.MeshId.."|TEX_"..(part.TextureID or "NOTEX"))
+        elseif part:IsA("Decal") and part.Texture and part.Texture ~= "" then
+            table.insert(partsData, "DECAL_"..part.Texture)
+        end
+    end
+
+    if #partsData > 0 then
+        table.sort(partsData)
+        return "MESHKEY_" .. table.concat(partsData, ";")
+    end
+
+    local displayName = tool:GetAttribute("DisplayName") or tool.Name
+    local toolName = tool.Name
+    local rarity = tool:GetAttribute("RarityName") or tool:GetAttribute("Rarity") or "Common"
+    local imageId = tool:GetAttribute("ImageId") or "NOIMAGE"
+    return "NAME_" .. displayName .. "_" .. toolName .. "_" .. rarity .. "_" .. imageId
+end
+
+-- ลงทะเบียน Tool ทั้งหมด
+local function registerItems(folder)
+    for _, tool in ipairs(folder:GetDescendants()) do
+        if not tool:IsA("Tool") then continue end
+        local key = generateUniqueKey(tool)
+        if not key then continue end
+
+        local displayName = tool:GetAttribute("DisplayName") or tool.Name
+        local imageId = tool:GetAttribute("ImageId") or "rbxassetid://7072725737"
+        local rarity = tool:GetAttribute("RarityName") or tool:GetAttribute("Rarity") or "Common"
+
+        WeaponDB[key] = {
+            Name = displayName,
+            Rarity = rarity,
+            ImageId = imageId,
+            ToolName = tool.Name,
+            Key = key
+        }
+
+        if imageId and imageId ~= "" and not PreloadedImages[imageId] then
+            PreloadedImages[imageId] = true
+            task.spawn(function()
+                pcall(function()
+                    ContentProvider:PreloadAsync({imageId})
+                end)
+            end)
+        end
+    end
+end
+
+pcall(function()
+    local itemsFolder = ReplicatedStorage:WaitForChild("Items", 5)
+    if itemsFolder then registerItems(itemsFolder) end
+    for _, obj in ipairs(ReplicatedStorage:GetChildren()) do
+        if obj:IsA("Folder") and (obj.Name:find("Weapon") or obj.Name:find("Item") or obj.Name:find("Tool")) then
+            registerItems(obj)
+        end
+    end
+    registerItems(game:GetService("StarterPack"))
+end)
+
+local function getWeaponInfo(tool)
+    if not tool or not tool:IsA("Tool") then return nil end
+    local key = generateUniqueKey(tool)
+    return WeaponDB[key]
+end
+
+-- สร้าง Billboard สำหรับผู้เล่น
+local function createBillboardForPlayer(player)
+    if player == LocalPlayer then return end
+
+    local function updateESP()
+        if not ItemESP_Enabled or not player.Character then return end
+
+        local currentTools = {}
+        local function scan(folder)
+            if not folder then return end
+            for _, tool in ipairs(folder:GetChildren()) do
+                if tool:IsA("Tool") and tool.Name ~= "Fists" then
+                    local info = getWeaponInfo(tool)
+                    if info then
+                        table.insert(currentTools, info)
+                    end
+                end
+            end
+        end
+
+        scan(player.Character)
+        local backpack = player:FindFirstChild("Backpack")
+        if backpack then scan(backpack) end
+
+        -- ถ้า Billboard หายหรือยังไม่มี สร้างใหม่
+        if not BillboardCache[player] or not BillboardCache[player].Parent then
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "ItemESP"
+            billboard.Adornee = hrp
+            billboard.Size = UDim2.new(0, 280, 0, 40)
+            billboard.StudsOffset = Vector3.new(0, -6.5, 0)
+            billboard.AlwaysOnTop = true
+            billboard.LightInfluence = 0
+            billboard.Parent = hrp
+
+            local container = Instance.new("Frame", billboard)
+            container.Size = UDim2.new(1,0,1,0)
+            container.BackgroundTransparency = 1
+
+            BillboardCache[player] = billboard
+        end
+
+        -- อัปเดต Tool ภายใน Billboard
+        local container = BillboardCache[player]:FindFirstChildOfClass("Frame")
+        if container then
+            container:ClearAllChildren()
+            local layout = Instance.new("UIGridLayout")
+            layout.CellSize = UDim2.new(0,35,0,35)
+            layout.CellPadding = UDim2.new(0,6,0,0)
+            layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+            layout.VerticalAlignment = Enum.VerticalAlignment.Center
+            layout.SortOrder = Enum.SortOrder.LayoutOrder
+            layout.Parent = container
+
+            for i, info in ipairs(currentTools) do
+                local img = Instance.new("ImageLabel")
+                img.Parent = container
+                img.Size = UDim2.new(0,35,0,35)
+                img.BackgroundTransparency = 1
+                img.Image = info.ImageId or "rbxassetid://7072725737"
+                img.ScaleType = Enum.ScaleType.Fit
+                img.LayoutOrder = i
+                local color = RARITY_COLORS[info.Rarity] or Color3.fromRGB(255,255,255)
+                img.ImageColor3 = color:Lerp(Color3.new(1,1,1),0.35)
+            end
+        end
+    end
+
+    -- อัปเดตทันทีทุก 1 วินาที
+    task.spawn(function()
+        while ItemESP_Enabled and player.Parent do
+            pcall(updateESP)
+            task.wait(1)
+        end
+    end)
+
+    -- เก็บ connection
+    ItemESP_UpdateConnections[player] = {}
+    if player.Character then
+        table.insert(ItemESP_UpdateConnections[player], player.Character.ChildAdded:Connect(function()
+            if ItemESP_Enabled then task.defer(updateESP) end
+        end))
+        table.insert(ItemESP_UpdateConnections[player], player.Character.ChildRemoved:Connect(function()
+            if ItemESP_Enabled then task.defer(updateESP) end
+        end))
+    end
+end
+
+-- ฟังก์ชันอัปเดตทุกคน (สร้าง Billboard ใหม่ถ้าหาย)
+local function UpdateAllItemESP()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local hasBillboard = BillboardCache[player] and BillboardCache[player].Parent
+            if ItemESP_Enabled and (not hasBillboard) then
+                createBillboardForPlayer(player)
+            end
+        end
+    end
+end
+
+-- Loop อัปเดตทุก 1 วินาที
+task.spawn(function()
+    while true do
+        task.wait(1)
+        UpdateAllItemESP()
+    end
+end)
+
+-- Loop สร้าง/รีเฟรช Billboard ใหม่ทุก 20 วินาที
+task.spawn(function()
+    while true do
+        task.wait(20)
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and ItemESP_Enabled then
+                if BillboardCache[player] and BillboardCache[player].Parent then
+                    BillboardCache[player]:Destroy()
+                    BillboardCache[player] = nil
+                end
+                createBillboardForPlayer(player)
+            end
+        end
+    end
+end)
+
+-- Player Added/Removed
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer and ItemESP_Enabled then
+        task.wait(0.1)
+        createBillboardForPlayer(p)
+    end
+end)
+Players.PlayerRemoving:Connect(function(p)
+    if BillboardCache[p] then
+        BillboardCache[p]:Destroy()
+        BillboardCache[p] = nil
+    end
+    if ItemESP_UpdateConnections[p] then
+        for _, conn in pairs(ItemESP_UpdateConnections[p]) do
+            if conn.Connected then conn:Disconnect() end
+        end
+        ItemESP_UpdateConnections[p] = nil
+    end
+end)
+
+EspTab:Toggle({
+    Title = "Item",
+    Value = ItemESP_Enabled,
+    Flag = "DroppedItemsESP",
+    Callback = function(state)
+        ItemESP_Enabled = state
+        if state then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer then
+                    createBillboardForPlayer(p)
+                end
+            end
+        else
+            for p, billboard in pairs(BillboardCache) do
+                if billboard then billboard:Destroy() end
+            end
+            BillboardCache = {}
+            for player, conns in pairs(ItemESP_UpdateConnections) do
+                for _, conn in pairs(conns) do
+                    if conn.Connected then conn:Disconnect() end
+                end
+                ItemESP_UpdateConnections[player] = nil
+            end
+        end
+    end
+})
 
 local Players = game:GetService("Players")      
 local RunService = game:GetService("RunService")      
