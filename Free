@@ -1741,6 +1741,10 @@ local HideNameEnabled = false
 local AntiLookEnabled = false
 local AntiRagdollEnabled = false
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Data_upvr = require(ReplicatedStorage.Modules.Core.Data)
+
 local bankButton = CheaterTab:Button({
     Title = "🏦 Bank Balance :",
     Desc = "<font color=\"rgb(0,255,255)\">$0</font>", -- สีฟ้าสดใส
