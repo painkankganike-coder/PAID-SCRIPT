@@ -1345,6 +1345,245 @@ EspTab:Toggle({
 })
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+-- 🔫 FireRate MOD
+local Automatic = false
+local FireRate = 1500
+local toolCache = {}
+
+local function matchesTarget(name, target)
+    name = name:lower()
+    target = target:lower()
+    return name:find(target) ~= nil or name:match("%d*_" .. target .. "_?%d*") ~= nil
+end
+
+local function applyAttributesSmart(gun)
+    local prev = toolCache[gun]
+    if prev and prev.FireRate == FireRate then return end
+
+    local attrValue = gun:GetAttribute("fire_rate")
+    if attrValue ~= nil then
+        gun:SetAttribute("fire_rate", FireRate)
+    end
+
+    for _, child in ipairs(gun:GetDescendants()) do
+        if (child:IsA("NumberValue") or child:IsA("IntValue")) and matchesTarget(child.Name, "fire_rate") then
+            child.Value = FireRate
+        end
+    end
+
+    toolCache[gun] = { FireRate = FireRate }
+end
+
+local function updateAllGuns()
+    if player.Character then
+        for _, tool in ipairs(player.Character:GetChildren()) do
+            if tool:IsA("Tool") then
+                applyAttributesSmart(tool)
+            end
+        end
+    end
+    for _, tool in ipairs(player.Backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            applyAttributesSmart(tool)
+        end
+    end
+end
+
+player.CharacterAdded:Connect(function(char)
+    char.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") and Automatic then
+            applyAttributesSmart(child)
+        end
+    end)
+    if Automatic then
+        task.wait(0.1)
+        updateAllGuns()
+    end
+end)
+
+player.Backpack.ChildAdded:Connect(function(child)
+    if child:IsA("Tool") and Automatic then
+        applyAttributesSmart(child)
+    end
+end)
+
+WeaponTab:Toggle({
+    Title = "Automatic",
+    Value = Automatic,
+    Flag = "FireRateAuto",
+    Callback = function(state)
+        Automatic = state
+        if Automatic then
+            updateAllGuns()
+        end
+    end
+})
+
+WeaponTab:Slider({
+    Title = "Fire Rate",
+    Value = { Min = 100, Max = 2000, Default = FireRate },
+    Step = 1,
+    Flag = "FireRateValue",
+    Callback = function(value)
+        FireRate = tonumber(value)
+        updateAllGuns()
+    end
+})
+
+-- 🔫 No Recoil
+local GunModule = require(ReplicatedStorage.Modules.Game.ItemTypes.Gun)
+getgenv().NoRecoilEnabled = false
+local original_recoil = GunModule.apply_recoil
+local antiLoop = nil
+
+local function EnableNoRecoil()
+    if getgenv().NoRecoilEnabled then return end
+    getgenv().NoRecoilEnabled = true
+
+    GunModule.apply_recoil = function(arg1)
+        if arg1 and arg1.instance then
+            arg1.instance:SetAttribute("Recoil", 0)
+        end
+    end
+
+    antiLoop = task.spawn(function()
+        while getgenv().NoRecoilEnabled do
+            local char = player.Character
+            local tool = char and char:FindFirstChildOfClass("Tool")
+            if tool and tool:GetAttribute("Recoil") then
+                tool:SetAttribute("Recoil", 0)
+            end
+            task.wait(0.3)
+        end
+    end)
+
+    print("✅ No Recoil: ON")
+end
+
+local function DisableNoRecoil()
+    if not getgenv().NoRecoilEnabled then return end
+    getgenv().NoRecoilEnabled = false
+    GunModule.apply_recoil = original_recoil
+    if antiLoop then task.cancel(antiLoop); antiLoop = nil end
+    print("❌ No Recoil: OFF")
+end
+
+WeaponTab:Toggle({
+    Title = "No Recoil",
+    Value = getgenv().NoRecoilEnabled,
+    Flag = "NoRecoil",
+    Callback = function(state)
+        if state then EnableNoRecoil() else DisableNoRecoil() end
+    end
+})
+
+-- 🛡 Hit Aura
+getgenv().HitAuraEnabled = false
+local autoLoop = nil
+local CounterTable, SendRemote
+
+-- หา CounterTable
+pcall(function()
+    for _, Obj in ipairs(getgc(true)) do
+        if typeof(Obj) == "table" and rawget(Obj, "event") and rawget(Obj, "func") then
+            CounterTable = Obj
+            break
+        end
+    end
+end)
+
+-- หา Remote
+pcall(function()
+    local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+    SendRemote = Remotes:WaitForChild("Send", 5)
+end)
+
+local function NetSend(...)
+    if not CounterTable or not CounterTable.event or not SendRemote then return end
+    local args = {...}
+    CounterTable.event = (CounterTable.event or 0) + 1
+    pcall(function()
+        SendRemote:FireServer(CounterTable.event, unpack(args))
+    end)
+end
+
+local function getActiveTool()
+    local char = player.Character
+    if not char then return nil end
+    for _, obj in pairs(char:GetChildren()) do
+        if obj:IsA("Tool") then return obj end
+    end
+    return nil
+end
+
+local function getPlayersInRange(radius)
+    local inRange = {}
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return inRange end
+    local pos = char.HumanoidRootPart.Position
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+            and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+            local dist = (p.Character.HumanoidRootPart.Position - pos).Magnitude
+            if dist <= radius then
+                table.insert(inRange, p)
+            end
+        end
+    end
+    return inRange
+end
+
+local function AttackNearby()
+    local tool = getActiveTool()
+    if not tool then return end
+    local targets = getPlayersInRange(12)
+    for _, target in ipairs(targets) do
+        local hrp = player.Character.HumanoidRootPart
+        local targetHRP = target.Character.HumanoidRootPart
+        if hrp and targetHRP then
+            local lookAtCFrame = CFrame.lookAt(hrp.Position, targetHRP.Position)
+            NetSend("melee_attack", tool, {target}, lookAtCFrame, 0.75)
+        end
+    end
+end
+
+local function StartHitAura()
+    if autoLoop then return end
+    autoLoop = task.spawn(function()
+        while getgenv().HitAuraEnabled do
+            pcall(AttackNearby)
+            task.wait(0.3)
+        end
+    end)
+end
+
+local function StopHitAura()
+    getgenv().HitAuraEnabled = false
+    if autoLoop then task.cancel(autoLoop); autoLoop = nil end
+end
+
+WeaponTab:Toggle({
+    Title = "Hit Aura",
+    Value = getgenv().HitAuraEnabled,
+    Flag = "HitAura",
+    Callback = function(state)
+        if state then
+            getgenv().HitAuraEnabled = true
+            StartHitAura()
+            print("✅ Hit Aura: ON")
+        else
+            StopHitAura()
+            print("❌ Hit Aura: OFF")
+        end
+    end
+})
+
+local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
@@ -2305,245 +2544,6 @@ UserInputService.InputBegan:Connect(function(input,gpe)
     if gpe then return end
     if input.KeyCode==Enum.KeyCode.Z then SnapQuick() end
 end)
-
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-
-local player = Players.LocalPlayer
-
--- 🔫 FireRate MOD
-local Automatic = false
-local FireRate = 1500
-local toolCache = {}
-
-local function matchesTarget(name, target)
-    name = name:lower()
-    target = target:lower()
-    return name:find(target) ~= nil or name:match("%d*_" .. target .. "_?%d*") ~= nil
-end
-
-local function applyAttributesSmart(gun)
-    local prev = toolCache[gun]
-    if prev and prev.FireRate == FireRate then return end
-
-    local attrValue = gun:GetAttribute("fire_rate")
-    if attrValue ~= nil then
-        gun:SetAttribute("fire_rate", FireRate)
-    end
-
-    for _, child in ipairs(gun:GetDescendants()) do
-        if (child:IsA("NumberValue") or child:IsA("IntValue")) and matchesTarget(child.Name, "fire_rate") then
-            child.Value = FireRate
-        end
-    end
-
-    toolCache[gun] = { FireRate = FireRate }
-end
-
-local function updateAllGuns()
-    if player.Character then
-        for _, tool in ipairs(player.Character:GetChildren()) do
-            if tool:IsA("Tool") then
-                applyAttributesSmart(tool)
-            end
-        end
-    end
-    for _, tool in ipairs(player.Backpack:GetChildren()) do
-        if tool:IsA("Tool") then
-            applyAttributesSmart(tool)
-        end
-    end
-end
-
-player.CharacterAdded:Connect(function(char)
-    char.ChildAdded:Connect(function(child)
-        if child:IsA("Tool") and Automatic then
-            applyAttributesSmart(child)
-        end
-    end)
-    if Automatic then
-        task.wait(0.1)
-        updateAllGuns()
-    end
-end)
-
-player.Backpack.ChildAdded:Connect(function(child)
-    if child:IsA("Tool") and Automatic then
-        applyAttributesSmart(child)
-    end
-end)
-
-WeaponTab:Toggle({
-    Title = "Automatic",
-    Value = Automatic,
-    Flag = "FireRateAuto",
-    Callback = function(state)
-        Automatic = state
-        if Automatic then
-            updateAllGuns()
-        end
-    end
-})
-
-WeaponTab:Slider({
-    Title = "Fire Rate",
-    Value = { Min = 100, Max = 2000, Default = FireRate },
-    Step = 1,
-    Flag = "FireRateValue",
-    Callback = function(value)
-        FireRate = tonumber(value)
-        updateAllGuns()
-    end
-})
-
--- 🔫 No Recoil
-local GunModule = require(ReplicatedStorage.Modules.Game.ItemTypes.Gun)
-getgenv().NoRecoilEnabled = false
-local original_recoil = GunModule.apply_recoil
-local antiLoop = nil
-
-local function EnableNoRecoil()
-    if getgenv().NoRecoilEnabled then return end
-    getgenv().NoRecoilEnabled = true
-
-    GunModule.apply_recoil = function(arg1)
-        if arg1 and arg1.instance then
-            arg1.instance:SetAttribute("Recoil", 0)
-        end
-    end
-
-    antiLoop = task.spawn(function()
-        while getgenv().NoRecoilEnabled do
-            local char = player.Character
-            local tool = char and char:FindFirstChildOfClass("Tool")
-            if tool and tool:GetAttribute("Recoil") then
-                tool:SetAttribute("Recoil", 0)
-            end
-            task.wait(0.3)
-        end
-    end)
-
-    print("✅ No Recoil: ON")
-end
-
-local function DisableNoRecoil()
-    if not getgenv().NoRecoilEnabled then return end
-    getgenv().NoRecoilEnabled = false
-    GunModule.apply_recoil = original_recoil
-    if antiLoop then task.cancel(antiLoop); antiLoop = nil end
-    print("❌ No Recoil: OFF")
-end
-
-WeaponTab:Toggle({
-    Title = "No Recoil",
-    Value = getgenv().NoRecoilEnabled,
-    Flag = "NoRecoil",
-    Callback = function(state)
-        if state then EnableNoRecoil() else DisableNoRecoil() end
-    end
-})
-
--- 🛡 Hit Aura
-getgenv().HitAuraEnabled = false
-local autoLoop = nil
-local CounterTable, SendRemote
-
--- หา CounterTable
-pcall(function()
-    for _, Obj in ipairs(getgc(true)) do
-        if typeof(Obj) == "table" and rawget(Obj, "event") and rawget(Obj, "func") then
-            CounterTable = Obj
-            break
-        end
-    end
-end)
-
--- หา Remote
-pcall(function()
-    local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
-    SendRemote = Remotes:WaitForChild("Send", 5)
-end)
-
-local function NetSend(...)
-    if not CounterTable or not CounterTable.event or not SendRemote then return end
-    local args = {...}
-    CounterTable.event = (CounterTable.event or 0) + 1
-    pcall(function()
-        SendRemote:FireServer(CounterTable.event, unpack(args))
-    end)
-end
-
-local function getActiveTool()
-    local char = player.Character
-    if not char then return nil end
-    for _, obj in pairs(char:GetChildren()) do
-        if obj:IsA("Tool") then return obj end
-    end
-    return nil
-end
-
-local function getPlayersInRange(radius)
-    local inRange = {}
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return inRange end
-    local pos = char.HumanoidRootPart.Position
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-            and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
-            local dist = (p.Character.HumanoidRootPart.Position - pos).Magnitude
-            if dist <= radius then
-                table.insert(inRange, p)
-            end
-        end
-    end
-    return inRange
-end
-
-local function AttackNearby()
-    local tool = getActiveTool()
-    if not tool then return end
-    local targets = getPlayersInRange(12)
-    for _, target in ipairs(targets) do
-        local hrp = player.Character.HumanoidRootPart
-        local targetHRP = target.Character.HumanoidRootPart
-        if hrp and targetHRP then
-            local lookAtCFrame = CFrame.lookAt(hrp.Position, targetHRP.Position)
-            NetSend("melee_attack", tool, {target}, lookAtCFrame, 0.75)
-        end
-    end
-end
-
-local function StartHitAura()
-    if autoLoop then return end
-    autoLoop = task.spawn(function()
-        while getgenv().HitAuraEnabled do
-            pcall(AttackNearby)
-            task.wait(0.3)
-        end
-    end)
-end
-
-local function StopHitAura()
-    getgenv().HitAuraEnabled = false
-    if autoLoop then task.cancel(autoLoop); autoLoop = nil end
-end
-
-WeaponTab:Toggle({
-    Title = "Hit Aura",
-    Value = getgenv().HitAuraEnabled,
-    Flag = "HitAura",
-    Callback = function(state)
-        if state then
-            getgenv().HitAuraEnabled = true
-            StartHitAura()
-            print("✅ Hit Aura: ON")
-        else
-            StopHitAura()
-            print("❌ Hit Aura: OFF")
-        end
-    end
-})
 
 local ConfigManager = Window.ConfigManager  
 local Loaded = false  
